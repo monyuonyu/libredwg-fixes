@@ -1922,13 +1922,25 @@ DWG_ENTITY (DIMENSION_ANG2LN)
       FIELD_HANDLE (dimstyle, 2, 0);
   }
   LATER_VERSIONS {
+    // ODA 20.4.27 order: 16-pt (2RD), 13, 14, 15, 10-pt (3BD).
+    // Keep the DXF meaning, as for R11 above: def_pt is DXF 10 (end of the
+    // 2nd extension line, written in AcDbDimension), xline2end_pt is DXF 16
+    // (point on the dimension arc, OCS). The 2RD used to be stored in
+    // def_pt and the last 3BD in xline2end_pt, so DXF output swapped 10/16.
+    DXF {
+      FIELD_3BD (xline1start_pt, 13);
+      FIELD_3BD (xline1end_pt, 14);
+      FIELD_3BD (xline2start_pt, 15);
+      FIELD_3BD (xline2end_pt, 16);
+    } else {
+      FIELD_2RD (xline2end_pt, 16);
+      FIELD_3BD (xline1start_pt, 13);
+      FIELD_3BD (xline1end_pt, 14);
+      FIELD_3BD (xline2start_pt, 15);
 #ifndef IS_JSON
-    FIELD_2RD (def_pt, 0);
+      FIELD_3BD (def_pt, 10);
 #endif
-    FIELD_3BD (xline1start_pt, 13);
-    FIELD_3BD (xline1end_pt, 14);
-    FIELD_3BD (xline2start_pt, 15);
-    FIELD_3BD (xline2end_pt, 16);
+    }
 
     COMMON_ENTITY_HANDLE_DATA;
     FIELD_HANDLE (dimstyle, 5, 0);
