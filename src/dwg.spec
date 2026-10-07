@@ -1933,7 +1933,11 @@ DWG_ENTITY (DIMENSION_ANG2LN)
       FIELD_3BD (xline2start_pt, 15);
       FIELD_3BD (xline2end_pt, 16);
     } else {
+#ifdef IS_JSON
+      FIELD_3BD (xline2end_pt, 16); // in_json expects the 3D struct field
+#else
       FIELD_2RD (xline2end_pt, 16);
+#endif
       FIELD_3BD (xline1start_pt, 13);
       FIELD_3BD (xline1end_pt, 14);
       FIELD_3BD (xline2start_pt, 15);
