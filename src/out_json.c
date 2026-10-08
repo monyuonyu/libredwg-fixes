@@ -171,15 +171,13 @@ static char *_path_field (const char *path);
 #define VALUE_RLx(value, dxf) VALUE ((BITCODE_RL)value, RL, dxf)
 #define VALUE_RLL(value, dxf) VALUE (value, RLL, dxf)
 #define VALUE_RLLd(value, dxf) VALUE (value, RLLd, dxf)
-#ifdef IS_RELEASE
-#  define VALUE_RD(value, dxf)                                                \
-    if (bit_isnan (value))                                                    \
-      _VALUE_RD (0.0, dxf)                                                    \
-    else                                                                      \
-      _VALUE_RD (value, dxf)
-#else
-#  define VALUE_RD(value, dxf) _VALUE_RD (value, dxf)
-#endif
+// JSON has no NaN or Infinity: "nan", "-nan" or "inf" made the whole output
+// unreadable (gh44-error.dwg, a misread RAPIDRTRENDERSETTINGS). Write 0.0.
+#define VALUE_RD(value, dxf)                                                  \
+  if (bit_isnan (value) || !isfinite (value))                                 \
+    _VALUE_RD (0.0, dxf)                                                      \
+  else                                                                        \
+    _VALUE_RD (value, dxf)
 #define _VALUE_RD(value, dxf)                                                 \
   {                                                                           \
     char _buf[256];                                                           \
