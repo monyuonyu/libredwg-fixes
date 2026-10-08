@@ -3390,6 +3390,15 @@ DWG_TABLE (LAYER)
     // separate DXF flag 70 from the internal DWG flag0 bitmask
     int flag0;
     ENCODER {
+      // R13/R14 have no plot flag and lineweight: AutoCAD's defaults, plot
+      // and lineweight DEFAULT (31). 0 made every layer not plottable, 0.00mm.
+      IF_ENCODE_FROM_EARLIER {
+        if (dat->from_version < R_2000b && !(dwg->opts & DWG_OPTS_INJSON))
+          {
+            FIELD_VALUE (plotflag) = 1;
+            FIELD_VALUE (linewt) = 31;
+          }
+      }
       // with json we only use flag0, with DXF we use flag
       if (dwg->opts & DWG_OPTS_INDXF) {
         FIELD_VALUE (off)           = FIELD_VALUE (color.index) < 0;
@@ -3461,7 +3470,10 @@ DWG_TABLE (LAYER)
   }
   VERSIONS (R_13b1, R_14) {
     DECODER {
-      FIELD_VALUE (off) = FIELD_VALUE (color.index) < 0;
+      // Off is the bit read above, or a negative color. AutoCAD's R14
+      // drawings keep the color positive and set the bit (sample_AC1014
+      // LAYER_OFF), overwriting the bit turned off layers on.
+      FIELD_VALUE (off) = FIELD_VALUE (off) || FIELD_VALUE (color.index) < 0;
       LOG_LAYER_FLAG(off);
     }
     // for DWG
