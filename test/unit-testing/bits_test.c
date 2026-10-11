@@ -955,7 +955,9 @@ bit_utf8_to_TV_tests (void)
     fail ("bit_utf8_to_TV %s as CP949", p);
   p = bit_utf8_to_TV (dest, (const unsigned char *)"시험", sizeof (dest),
                       strlen ("시험"), 0, CP_CP949);
-  if (strEQc (p, "\xdc\xc3\x7e\xe8"))
+  // CP949 for 시험 is BD C3 C7 E8 (Python, Windows). The old expectation
+  // DC C3 7E E8 was the >> 4 bug of the lead byte.
+  if (strEQc (p, "\xbd\xc3\xc7\xe8"))
     pass ();
   else
     fail ("bit_utf8_to_TV %s as CP949", p);
