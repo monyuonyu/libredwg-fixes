@@ -3466,6 +3466,16 @@ DWG_TABLE (LAYER)
         FIELD_VALUE (color.index) = abs (FIELD_VALUE (color.index));
       }
     }
+    ENCODER {
+      // DWG: off is the bit, the color stays positive as AutoCAD writes it.
+      // The negative DXF color of an off layer made an index of 65529,
+      // which ACadSharp rejects ("True index must be between 0 and 257").
+      if (FIELD_VALUE (color.index) < 0)
+        {
+          FIELD_VALUE (off) = 1;
+          FIELD_VALUE (color.index) = -FIELD_VALUE (color.index);
+        }
+    }
     FIELD_CMC (color, 62);
   }
   VERSIONS (R_13b1, R_14) {
@@ -5580,9 +5590,10 @@ DWG_ENTITY (LWPOLYLINE)
     REPEAT (num_points, points, BITCODE_2RD)
       {
         FIELD_2RD (points[rcount1], 10);
+        // the widths do not depend on the bulges: without bulges the
+        // per-vertex widths were dropped from the DXF
         if (FIELD_VALUE (num_widths) && FIELD_VALUE (widths) &&
             rcount1 < FIELD_VALUE (num_widths) &&
-            FIELD_VALUE (num_bulges) == FIELD_VALUE (num_points) &&
             (FIELD_VALUE (widths[rcount1].start) != 0.0 ||
              FIELD_VALUE (widths[rcount1].end) != 0.0))
           {
