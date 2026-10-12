@@ -381,8 +381,10 @@
     {
       FIELD_B (isbylayerlt, 0);
 #ifdef IS_DECODER
-      if (FIELD_VALUE (isbylayerlt))
-        FIELD_VALUE (ltype_flags) = FIELD_VALUE (isbylayerlt) ? 0 : 3;
+      // not ByLayer: the linetype handle (3). The if (isbylayerlt) before
+      // left every R13/R14 entity with an own linetype at 0 (ByLayer) when
+      // written as R2000 (example_r14: CONTINUOUS became ByLayer).
+      FIELD_VALUE (ltype_flags) = FIELD_VALUE (isbylayerlt) ? 0 : 3;
 #endif
     }
   SINCE (R_2004a) //ODA bug
@@ -555,6 +557,12 @@
   SINCE (R_2000b) {
     // DXF later after 6, see common_entity_handle_data.spec
     // Ideally CMC 60 should be deferred after layer 8, before linewt 370 also
+#ifdef IS_ENCODER
+    // R13/R14 have no lineweight: ByLayer (29) as AutoCAD 2000 opens them,
+    // not 0 (0.00mm)
+    if (dat->from_version < R_2000b && !_ent->linewt)
+      _ent->linewt = 29;
+#endif
 #ifndef IS_DXF
     FIELD_RC (linewt, 370);
 #endif
