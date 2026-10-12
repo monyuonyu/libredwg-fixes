@@ -1116,7 +1116,8 @@ bit_write_UMC (Bit_Chain *dat, BITCODE_UMC val)
       byte[i] |= 0x80;
       mask = mask << 7;
     }
-  for (i = 0; i < 4; i++)
+  // the shortest form, the high zero groups dropped
+  for (i = 0; i < MAX_BYTE_UMC - 1; i++)
     if (byte[i] & 0x7f)
       break;
 
