@@ -581,7 +581,9 @@ free_3dsolid (Dwg_Object *restrict obj, Dwg_Entity_3DSOLID *restrict _obj)
       FIELD_HANDLE (history_id, 4, 350);                                      \
     }                                                                         \
   } else if (FIELD_VALUE (version) > 1                                        \
-             && (!IF_IS_DECODER || AVAIL_BITS (hdl_dat) >= 8)) {              \
+             && (!IF_IS_DECODER || AVAIL_BITS (hdl_dat) >= 8)                 \
+             /* R2007+ (ACadSharp, AutoCAD's R2004 drawings have none) */     \
+             && (!IF_IS_ENCODER || dat->version >= R_2007a)) {                \
       FIELD_HANDLE (history_id, 4, 350);                                      \
   }                                                                           \
   FREE { FIELD_HANDLE (history_id, 4, 350); }
