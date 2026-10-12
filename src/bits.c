@@ -2781,7 +2781,16 @@ bit_write_T16 (Bit_Chain *restrict dat, BITCODE_T16 restrict chain)
       chain[INT16_MAX - 1] = '\0';
     }
   else if (length == 0)
-    bit_write_RS (dat, 0);
+    {
+      // 8-bit: the NUL only, as AutoCAD (01 00 00)
+      if (dat->version < R_2007)
+        {
+          bit_write_RS (dat, 1);
+          bit_write_RC (dat, 0);
+        }
+      else
+        bit_write_RS (dat, 0);
+    }
   else if (dat->version >= R_2007)
     {
       if (!IS_FROM_TU (dat))
@@ -2816,7 +2825,10 @@ bit_write_T16 (Bit_Chain *restrict dat, BITCODE_T16 restrict chain)
                 bit_write_RC (dat, dest[i]);
             }
           else
-            bit_write_RS (dat, 0);
+            {
+              bit_write_RS (dat, 1);
+              bit_write_RC (dat, 0);
+            }
           free (u8);
         }
       else
