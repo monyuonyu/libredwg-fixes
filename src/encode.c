@@ -2918,7 +2918,10 @@ encode_classes (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
                    klass->item_class_id);
         SINCE (R_2004a)
         {
-          if (!klass->dwg_version)
+          // 0 is valid in R2004+ (AutoCAD has it for many classes)
+          if (!klass->dwg_version
+              && (dwg->header.from_version < R_2004
+                  || (dwg->opts & DWG_OPTS_IN)))
             {
               klass->dwg_version = (BITCODE_BL)dwg->header.dwg_version;
               klass->maint_version = (BITCODE_BL)dwg->header.maint_version;
@@ -2980,7 +2983,10 @@ encode_classes (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
                    klass->item_class_id);
         SINCE (R_2004a)
         {
-          if (!klass->dwg_version)
+          // 0 is valid in R2004+ (AutoCAD has it for many classes)
+          if (!klass->dwg_version
+              && (dwg->header.from_version < R_2004
+                  || (dwg->opts & DWG_OPTS_IN)))
             {
               klass->dwg_version = (BITCODE_BL)dwg->header.dwg_version;
               klass->maint_version = (BITCODE_BL)dwg->header.maint_version;
