@@ -1294,7 +1294,9 @@ bit_write_DD (Bit_Chain *dat, double value, double default_value)
 {
   BITCODE_BB bits = 0;
 
-  if (fabs (value - default_value) < 1e-12)
+  // only the very same value: a difference in the last bits is real
+  // (AutoCAD's LINE end 1 ulp off the start was written as the start)
+  if (!memcmp (&value, &default_value, sizeof (double)))
     bit_write_BB (dat, 0);
   else
     {
