@@ -3344,6 +3344,10 @@ encode_objects_handles (Dwg_Data *restrict dwg, Bit_Chain *restrict dat,
 #endif
       bit_write_CRC_BE (dat, size_adr, 0xC0C1);
     }
+  else
+    // the last object closed a chunk: drop the size reserved for the next,
+    // else 2 zero bytes stood before the last chunk of size 2
+    dat->byte -= 2;
 #ifndef NDEBUG
   if (dwg->header.version >= R_1_2 && dwg->header.version < R_2004)
     {
