@@ -5406,6 +5406,14 @@ DWG_OBJECT (PLOTSETTINGS)
   FIELD_2BD_1 (paper_image_origin, 148);
   SINCE (R_2004a)
     {
+      // R2000 has none: AutoCAD's defaults, a DPI of 0 is invalid
+      IF_ENCODE_FROM_EARLIER {
+        if (!FIELD_VALUE (shadeplot_customdpi))
+          {
+            FIELD_VALUE (shadeplot_reslevel) = 2;
+            FIELD_VALUE (shadeplot_customdpi) = 300;
+          }
+      }
       FIELD_BS (shadeplot_type, 76);
       FIELD_BS (shadeplot_reslevel, 77);
       FIELD_BS (shadeplot_customdpi, 78);
@@ -5497,6 +5505,14 @@ DWG_OBJECT (LAYOUT)
   FIELD_2BD_1 (plotsettings.paper_image_origin, 148);
   SINCE (R_2004a)
     {
+      // R2000 has none: AutoCAD's defaults, a DPI of 0 is invalid
+      IF_ENCODE_FROM_EARLIER {
+        if (!FIELD_VALUE (plotsettings.shadeplot_customdpi))
+          {
+            FIELD_VALUE (plotsettings.shadeplot_reslevel) = 2;
+            FIELD_VALUE (plotsettings.shadeplot_customdpi) = 300;
+          }
+      }
       FIELD_BS (plotsettings.shadeplot_type, 76);
       FIELD_BS (plotsettings.shadeplot_reslevel, 77);
       FIELD_BS (plotsettings.shadeplot_customdpi, 78);
