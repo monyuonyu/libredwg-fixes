@@ -2547,8 +2547,11 @@ encode_template (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
   dwg->header.section[sec_id].number = 4;
   dwg->header.section[sec_id].address = dat->byte;
   dwg->header.section[sec_id].size = 4; // always empty description
-  // Template description
-  bit_write_T16 (dat, _obj->description);
+  // Template description, empty as RS 0 (4 bytes in all, as AutoCAD)
+  if (_obj->description && *_obj->description)
+    bit_write_T16 (dat, _obj->description);
+  else
+    bit_write_RS (dat, 0);
   LOG_TRACE ("_obj->description: %s [T16]\n", _obj->description);
   // 0 - English, 1- Metric
   bit_write_RS (dat, dwg->header_vars.MEASUREMENT);
@@ -3036,9 +3039,17 @@ encode_classes (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
   dwg->header.section[sec_id].size
       = (dat->byte - dwg->header.section[sec_id].address) & 0xFFFFFFFF;
   LOG_TRACE ("       Classes (end): %4zu\n", dat->byte);
-  // FIXME: for all versions?
-  bit_write_RL (dat, 0x0DCA);
-  LOG_TRACE ("unknown: %04X [RL]\n", 0x0DCA);
+  // R2004+: 8 zero bytes as AutoCAD (counted in the section size)
+  SINCE (R_2004a)
+  {
+    bit_write_RLL (dat, 0);
+  }
+  else
+  {
+    // FIXME: for all versions?
+    bit_write_RL (dat, 0x0DCA);
+    LOG_TRACE ("unknown: %04X [RL]\n", 0x0DCA);
+  }
   return error;
 }
 
