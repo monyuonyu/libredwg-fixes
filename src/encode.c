@@ -3063,7 +3063,8 @@ encode_objects_handles (Dwg_Data *restrict dwg, Bit_Chain *restrict dat,
     bit_chain_alloc (&sec_dat[sec_id]);
     str_dat = hdl_dat = dat = &sec_dat[sec_id];
     bit_chain_set_version (dat, old_dat);
-    dat->byte += 4; // r2004 object map offsets start after a 4-byte prefix
+    // the object map offsets start after this RL, 0x0dca as AutoCAD
+    bit_write_RL (dat, 0x0dca);
   }
   LOG_INFO ("\n=======> Objects: %4zu\n", dat->byte);
   size_adr = dat->byte;
