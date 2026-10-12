@@ -4139,7 +4139,12 @@ dwg_encode (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
                         : 5;
           }
         else
-          dwg->header.num_sections = 6;
+          {
+            dwg->header.num_sections = 6;
+            // not the R2004+ pages of the input
+            if (dwg->header.version >= R_2004)
+              dwg->header.sections = 6;
+          }
         // minimal DXF:
         // if (dwg->opts & (DWG_OPTS_INDXF | DWG_OPTS_MINIMAL)
         //    && (!dwg->header_vars.HANDSEED ||
