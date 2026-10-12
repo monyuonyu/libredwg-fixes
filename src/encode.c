@@ -1169,7 +1169,7 @@ dwg_dxf_class_number (const Dwg_Data *restrict dwg, Dwg_Version_Type version,
 #ifdef ENCODE_UNKNOWN_AS_DUMMY
 /** Write an unknown entity/object of a newer DWG as ACAD_PROXY_ENTITY or
  * ACAD_PROXY_OBJECT, see dwg_proxy_from_unknown.
- * Only for an R2000 target from an R2004+ DWG.
+ * Only for an R2000 target from an R2004+ DWG, or R2004 from R2007+.
  * Returns 1 if converted, 0 to fall back to the POINT/PLACEHOLDER.
  */
 static int
@@ -1182,8 +1182,9 @@ encode_unknown_as_proxy (Dwg_Data *restrict dwg, Dwg_Object *restrict obj)
   BITCODE_BL numbits, num_objids, version;
   BITCODE_H *objids;
 
-  if (dwg->header.version < R_2000b || dwg->header.version > R_2002
-      || dwg->header.from_version < R_2004a)
+  if (dwg->header.version < R_2000b || dwg->header.version > R_2004
+      || dwg->header.from_version < R_2004a
+      || dwg->header.from_version <= dwg->header.version)
     return 0;
   if (!dwg_proxy_from_unknown (dwg, obj, &data, &numbits, &objids,
                                &num_objids, &version))
