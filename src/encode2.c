@@ -16,7 +16,6 @@
  * written by Reini Urban
  */
 
-#define HAVE_COMPRESS_R2004_SECTION
 #define ENCODE_PATCH_RSSIZE
 
 #include "config.h"
