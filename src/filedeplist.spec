@@ -19,7 +19,16 @@
   #include "spec.h"
 
   FIELD_RL (num_features, 0);
+#if defined(IS_DECODER) || defined(IS_ENCODER)
+  // RL length and the chars, as all strings here (not TV in R2004)
+  REPEAT (num_features, features, BITCODE_TU32)
+  REPEAT_BLOCK
+    FIELD_T32 (features[rcount1], 0);
+  END_REPEAT_BLOCK
+  END_REPEAT (features)
+#else
   FIELD_VECTOR_T (features, TU32, num_features, 0);
+#endif
   FIELD_RL (num_files, 0);
   REPEAT (num_files, files, Dwg_FileDepList_Files)
   REPEAT_BLOCK

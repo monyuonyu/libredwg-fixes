@@ -2859,7 +2859,7 @@ bit_write_T32 (Bit_Chain *restrict dat, BITCODE_T32 restrict chain)
   else
     {
       if (chain)
-        length = strlen (chain) + 1;
+        length = strlen (chain); // without the NUL, as AutoCAD
       else
         length = 0;
       if (length > UINT32_MAX)
