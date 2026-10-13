@@ -2628,7 +2628,17 @@ DWG_ENTITY (SPLINE)
 
   //SUBCLASS (AcDbCurve)
   SUBCLASS (AcDbSpline)
-  FIELD_BL (scenario, 0);
+  ENCODER {
+    // R2013+: always 1 in AutoCAD's files, the scenario follows from the
+    // flags below
+    SINCE (R_2013b) {
+      VALUE_BL (1, 0);
+    } else {
+      FIELD_BL (scenario, 0);
+    }
+  } else {
+    FIELD_BL (scenario, 0);
+  }
   LOG_SPLINE_SCENARIO
   UNTIL (R_2013) {
     if (FIELD_VALUE (scenario) != 1 && FIELD_VALUE (scenario) != 2)
