@@ -1137,8 +1137,7 @@ bit_write_UMC (Bit_Chain *dat, BITCODE_UMC val)
     if (byte[i] & 0x7f)
       break;
 
-  if (byte[i] & 0x40 && i > 0)
-    i--;
+  // unsigned: no extra byte for 0x40 in the last one (unlike MC)
   byte[i] &= 0x7f;
   for (j = MAX_BYTE_UMC - 1; j >= i; j--)
     bit_write_RC (dat, byte[j]);
