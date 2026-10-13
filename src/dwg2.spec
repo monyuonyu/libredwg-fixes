@@ -216,6 +216,15 @@ DWG_OBJECT (SPATIAL_INDEX)
   // probably in main dat, not hdl_dat
   HANDLE_VECTOR (hdls, num_hdls, 5, 330);
   FIELD_BL (bindata_size, 90);
+  // not understood yet: the sizes may be wrong, keep it writable
+  DECODER {
+    if ((int64_t)_obj->bindata_size * 8 > AVAIL_BITS (dat))
+      {
+        LOG_ERROR ("Invalid bindata_size " FORMAT_BL ", set to 0",
+                   _obj->bindata_size);
+        _obj->bindata_size = 0;
+      }
+  }
   FIELD_BINARY (bindata, FIELD_VALUE (bindata_size), 310);
   DXF { VALUE_TFF ("END ACDBSPATIALINDEX BINARY DATA", 1); }
 
