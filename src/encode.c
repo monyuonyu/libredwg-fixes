@@ -7968,6 +7968,10 @@ dwg_encode_xdata (Bit_Chain *restrict dat, Dwg_Object_XRECORD *restrict _obj,
   if (dat->opts
       & DWG_OPTS_IN) // loosen the overflow checks on dxf/json imports
     end += xdata_size;
+  // the strings are UTF-16 since R2007: up to twice the size, plus the
+  // codepage bytes
+  else if (dat->version != dat->from_version)
+    end += xdata_size + 2 * (size_t)_obj->num_xdata;
 
   while (rbuf)
     {
