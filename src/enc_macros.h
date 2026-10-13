@@ -218,7 +218,7 @@
   }
 #define FIELD_T16(nam, dxf)                                                   \
   {                                                                           \
-    if (!IS_FROM_TU (dat))                                                    \
+    if (!IS_FROM_TU (dat) || dat->version < R_2007) /* 8-bit until R2004 */   \
       {                                                                       \
         bit_write_T16 (str_dat, _obj->nam);                                   \
         LOG_TRACE (#nam ": \"%s\" [T16 %d]\n", _obj->nam, dxf);               \

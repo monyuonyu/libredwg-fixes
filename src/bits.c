@@ -2753,10 +2753,13 @@ bit_write_TU16 (Bit_Chain *restrict dat, BITCODE_TU restrict chain)
 {
   size_t i, length;
 
-  if (chain)
-    length = bit_wcs2len (chain) + 1;
-  else
-    length = 0;
+  if (!chain || !*chain)
+    { // the NUL only, as AutoCAD
+      bit_write_RS (dat, 1);
+      bit_write_RS (dat, 0);
+      return;
+    }
+  length = bit_wcs2len (chain) + 1;
   if (length > UINT16_MAX)
     {
       loglevel = dat->opts & DWG_OPTS_LOGLEVEL;
@@ -2795,30 +2798,32 @@ bit_write_T16 (Bit_Chain *restrict dat, BITCODE_T16 restrict chain)
     }
   else if (length == 0)
     {
-      // 8-bit: the NUL only, as AutoCAD (01 00 00)
+      // the NUL only, as AutoCAD (01 00 00, since R2007 01 00 00 00)
+      bit_write_RS (dat, 1);
       if (dat->version < R_2007)
-        {
-          bit_write_RS (dat, 1);
-          bit_write_RC (dat, 0);
-        }
+        bit_write_RC (dat, 0);
       else
         bit_write_RS (dat, 0);
     }
   else if (dat->version >= R_2007)
     {
+      // with the terminating 0, as AutoCAD
       if (!IS_FROM_TU (dat))
         { // convert to unicode, expand \\U+
           BITCODE_TU wstr = bit_utf8_to_TU (chain, 0);
-          bit_write_RS (dat, (BITCODE_RS)length);
+          length = wstr ? bit_wcs2len (wstr) : 0;
+          bit_write_RS (dat, (BITCODE_RS)(length + 1));
           for (size_t i = 0; i < length; i++)
             bit_write_RS (dat, wstr[i]);
+          bit_write_RS (dat, 0);
           free (wstr);
         }
       else
         {
-          bit_write_RS (dat, (BITCODE_RS)length);
+          bit_write_RS (dat, (BITCODE_RS)(length + 1));
           for (size_t i = 0; i < length; i++)
             bit_write_RS (dat, chain[i]);
+          bit_write_RS (dat, 0);
         }
     }
   else
