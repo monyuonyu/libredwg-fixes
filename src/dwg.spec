@@ -3091,15 +3091,19 @@ DWG_ENTITY (LEADER)
   FIELD_3DPOINT (extrusion, 210);
   FIELD_3DPOINT (x_direction, 211);
   FIELD_3DPOINT (inspt_offset, 212);
-  VERSIONS (R_13c3, R_2007) {
+  // R2010+ too, but no box height and width (ACadSharp, AutoCAD's R2018
+  // LEADER of sample_AC1032 ends exactly so)
+  SINCE (R_13c3) {
     FIELD_3DPOINT (endptproj, 213);
   }
 
   VERSIONS (R_13b1, R_14) {
     FIELD_BD (dimgap, 0);
   }
-  FIELD_BD (box_height, 0);
-  FIELD_BD (box_width, 0);
+  UNTIL (R_2007) {
+    FIELD_BD (box_height, 0);
+    FIELD_BD (box_width, 0);
+  }
   FIELD_B (hookline_dir, 0); // if hook line is on x direction
   FIELD_B (arrowhead_on, 0);
   ENCODER {
