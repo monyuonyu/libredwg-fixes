@@ -714,7 +714,10 @@
       FIELD_BD (SHADOWPLANELOCATION, 40); // z height
     }
 
-  SINCE (R_14)
+  // Not in R2007+: AutoCAD's string stream starts right after
+  // SHADOWPLANELOCATION (example_2007 - example_2018, sample_AC1021 -
+  // sample_AC1032); we read 1, 180, 36874, 32843 from the strings there.
+  VERSIONS (R_14, R_2004)
     {
       FIELD_BS (unknown_54, 0); /* (type 5/6 only) these do not seem to be required */
       FIELD_BS (unknown_55, 0);
