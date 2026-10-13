@@ -652,6 +652,54 @@ free_TABLE_r2010 (Dwg_Object *restrict obj)
   _obj->num_cells = 0;
 }
 
+// after upconvert_TABLE(): the free spec follows from_version, so the
+// R2010+ table content is not freed there. Handles and colors are shallow.
+static void
+free_TABLE_r2000 (Dwg_Object *restrict obj)
+{
+  Dwg_Entity_TABLE *_obj = obj->tio.entity ? obj->tio.entity->tio.TABLE : NULL;
+  if (!_obj)
+    return;
+  if (_obj->tdata.rows)
+    {
+      for (BITCODE_BL i = 0; i < _obj->tdata.num_rows; i++)
+        {
+          Dwg_TableRow *row = &_obj->tdata.rows[i];
+          if (!row->cells)
+            continue;
+          for (BITCODE_BL j = 0; j < row->num_cells; j++)
+            {
+              Dwg_TableCell *cell = &row->cells[j];
+              if (!cell->cell_contents)
+                continue;
+              for (BITCODE_BL k = 0; k < cell->num_cell_contents; k++)
+                {
+                  Dwg_TableCellContent *ct = &cell->cell_contents[k];
+                  FREE_IF (ct->value.data_string);
+                  FREE_IF (ct->value.format_string);
+                  FREE_IF (ct->value.value_string);
+                  FREE_IF (ct->value.data_date);
+                  if (ct->attrs)
+                    {
+                      for (BITCODE_BL l = 0; l < ct->num_attrs; l++)
+                        FREE_IF (ct->attrs[l].value);
+                      FREE_IF (ct->attrs);
+                    }
+                }
+              FREE_IF (cell->cell_contents);
+            }
+          FREE_IF (row->cells);
+        }
+      FREE_IF (_obj->tdata.rows);
+    }
+  FREE_IF (_obj->tdata.cols);
+  FREE_IF (_obj->fdata.merged_cells);
+  FREE_IF (_obj->break_rows);
+  _obj->tdata.num_rows = _obj->tdata.num_cols = 0;
+  _obj->fdata.num_merged_cells = 0;
+  _obj->num_break_rows = 0;
+}
+
 // a R2010+ cell style, all pointers NULL afterwards
 static void
 free_CellStyle_r2010 (Dwg_CellStyle *restrict cs)
@@ -1059,6 +1107,8 @@ dwg_free_object (Dwg_Object *obj)
     }
   if (obj->fixedtype == DWG_TYPE_TABLE && dwg->header.from_version >= R_2010)
     free_TABLE_r2010 (obj);
+  else if (obj->fixedtype == DWG_TYPE_TABLE)
+    free_TABLE_r2000 (obj);
   switch (obj->type)
     {
     case DWG_TYPE_TEXT:

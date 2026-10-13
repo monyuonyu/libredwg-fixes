@@ -706,6 +706,10 @@ DWG_ENTITY (TABLE)
 
   SINCE (R_2010b) //AC1024
     {
+#ifdef IS_ENCODER
+      if (dwg->header.from_version < R_2010b)
+        upconvert_TABLE (obj);
+#endif
       FIELD_RC (unknown_rc, 0);
       FIELD_HANDLE (unknown_h, 5, 0);
       FIELD_BL (unknown_bl, 0);

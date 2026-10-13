@@ -62,6 +62,7 @@ bool dwg_encode_unknown_bits (Bit_Chain *restrict dat,
                               Dwg_Object *restrict obj);
 void downconvert_TABLESTYLE (Dwg_Object *restrict obj);
 void downconvert_TABLE (Dwg_Object *restrict obj);
+void upconvert_TABLE (Dwg_Object *restrict obj);
 void upconvert_TABLESTYLE (Dwg_Object *restrict obj);
 
 /* ACAD_PROXY_ENTITY/OBJECT data, see encode.c */
