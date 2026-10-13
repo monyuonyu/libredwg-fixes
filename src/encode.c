@@ -630,7 +630,9 @@ add_DUMMY_eed (Dwg_Object *obj)
       BITCODE_TU wstr = bit_utf8_to_TU (name, 0);
       data->u.eed_0_r2007.is_tu = 1;
       data->u.eed_0_r2007.length = len & 0xFFFF; // RS
-      memcpy (data->u.eed_0_r2007.string, wstr, len * 2);
+      if (wstr)
+        memcpy (data->u.eed_0_r2007.string, wstr, len * 2);
+      free (wstr);
     }
   else
     {

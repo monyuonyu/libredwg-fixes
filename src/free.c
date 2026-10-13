@@ -1105,6 +1105,14 @@ dwg_free_object (Dwg_Object *obj)
     {
       free_TABLESTYLE_r2010 (dat, obj);
     }
+  // the title cell style of upconvert_TABLESTYLE (its name is static)
+  else if (obj->fixedtype == DWG_TYPE_TABLESTYLE && obj->tio.object
+           && obj->tio.object->tio.TABLESTYLE && !(dwg->opts & DWG_OPTS_IN))
+    {
+      Dwg_Object_TABLESTYLE *_obj = obj->tio.object->tio.TABLESTYLE;
+      FREE_IF (_obj->ovr);
+      _obj->numoverrides = 0;
+    }
   if (obj->fixedtype == DWG_TYPE_TABLE && dwg->header.from_version >= R_2010)
     free_TABLE_r2010 (obj);
   else if (obj->fixedtype == DWG_TYPE_TABLE)
