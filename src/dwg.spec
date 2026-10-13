@@ -5965,7 +5965,9 @@ DWG_ENTITY (PROXY_ENTITY)
   }
   ENCODER {
     LOG_TRACE ("data_numbits: " FORMAT_BL " [ 93]\n", _obj->data_numbits);
-    bit_write_bits (dat, _obj->data, _obj->data_numbits);
+#ifdef IS_ENCODER
+    encode_proxy_data (dat, str_dat, dwg, _obj->data, _obj->data_numbits);
+#endif
   }
   DXF_OR_PRINT {
     unsigned bytes = _obj->data_numbits / 8;
@@ -6046,7 +6048,9 @@ DWG_OBJECT (PROXY_OBJECT)
   }
   ENCODER {
     LOG_TRACE ("data_numbits: " FORMAT_BL " [ 93]\n", _obj->data_numbits);
-    bit_write_bits (dat, _obj->data, _obj->data_numbits);
+#ifdef IS_ENCODER
+    encode_proxy_data (dat, str_dat, dwg, _obj->data, _obj->data_numbits);
+#endif
   }
   DXF_OR_PRINT {
     unsigned bytes = _obj->data_numbits / 8;

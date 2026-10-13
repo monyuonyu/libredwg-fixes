@@ -1144,6 +1144,40 @@ dwg_proxy_join (const BITCODE_RC *restrict d, BITCODE_BL dbits,
   return out;
 }
 
+/* Write the proxy data (bit_read_bits format). Since R2007 the data of an
+   R2007+ source ends with its string stream and has_strings bit: the
+   strings go to the string stream of the proxy (its footer is written with
+   the handle stream), else ACadSharp and AutoCAD find no strings there. */
+static void
+encode_proxy_data (Bit_Chain *restrict dat, Bit_Chain *restrict str_dat,
+                   const Dwg_Data *restrict dwg,
+                   const BITCODE_RC *restrict data, BITCODE_BL numbits)
+{
+  BITCODE_BL dbits, sbits;
+  BITCODE_RC *b;
+  int hs;
+  if (dat->version < R_2007a || str_dat == dat
+      || dwg->header.from_version < R_2007a || !data || !numbits
+      || (hs = dwg_proxy_split (data, numbits, &dbits, &sbits)) < 0)
+    {
+      bit_write_bits (dat, (BITCODE_TF)data, numbits);
+      return;
+    }
+  LOG_TRACE ("proxy data: " FORMAT_BL " bits, strings " FORMAT_BL "\n", dbits,
+             hs ? sbits : 0);
+  b = dbits ? dwg_proxy_bits (data, numbits, 0, dbits) : NULL;
+  for (BITCODE_BL i = 0; b && i < dbits; i++)
+    bit_write_B (dat, (b[i / 8] >> (7 - i % 8)) & 1);
+  free (b);
+  if (hs > 0 && sbits)
+    {
+      b = dwg_proxy_bits (data, numbits, dbits, sbits);
+      for (BITCODE_BL i = 0; b && i < sbits; i++)
+        bit_write_B (str_dat, (b[i / 8] >> (7 - i % 8)) & 1);
+      free (b);
+    }
+}
+
 /* The class number of DXF 91 (proxies): 500 + the position in the DXF
    CLASSES, which skip some classes since R2004 (see dxf_classes_write). */
 BITCODE_BL
@@ -1169,7 +1203,8 @@ dwg_dxf_class_number (const Dwg_Data *restrict dwg, Dwg_Version_Type version,
 #ifdef ENCODE_UNKNOWN_AS_DUMMY
 /** Write an unknown entity/object of a newer DWG as ACAD_PROXY_ENTITY or
  * ACAD_PROXY_OBJECT, see dwg_proxy_from_unknown.
- * Only for an R2000 target from an R2004+ DWG, or R2004 from R2007+.
+ * Only for an R2000 target from an R2004+ DWG, R2004 from R2007+, or
+ * R2010+ from a newer one.
  * Returns 1 if converted, 0 to fall back to the POINT/PLACEHOLDER.
  */
 static int
@@ -1182,7 +1217,8 @@ encode_unknown_as_proxy (Dwg_Data *restrict dwg, Dwg_Object *restrict obj)
   BITCODE_BL numbits, num_objids, version;
   BITCODE_H *objids;
 
-  if (dwg->header.version < R_2000b || dwg->header.version > R_2004
+  if (dwg->header.version < R_2000b
+      || (dwg->header.version > R_2004 && dwg->header.version < R_2010b)
       || dwg->header.from_version < R_2004a
       || dwg->header.from_version <= dwg->header.version)
     return 0;
