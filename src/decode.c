@@ -3351,6 +3351,163 @@ acds_private (Bit_Chain *restrict dat, Dwg_Data *restrict dwg)
   return error;
 }
 
+/* Little-endian reads from the AcDs byte stream, bounds-checked by the
+   caller. */
+static BITCODE_RL
+acds_rl (const BITCODE_RC *p)
+{
+  return (BITCODE_RL)p[0] | ((BITCODE_RL)p[1] << 8) | ((BITCODE_RL)p[2] << 16)
+         | ((BITCODE_RL)p[3] << 24);
+}
+
+static BITCODE_RLL
+acds_rll (const BITCODE_RC *p)
+{
+  return (BITCODE_RLL)acds_rl (p) | ((BITCODE_RLL)acds_rl (&p[4]) << 32);
+}
+
+/* The stream offset of the AcDs file segment segidx, with its size, or 0. */
+static size_t
+acds_segment (const Bit_Chain *dat, const Dwg_AcDs *_obj, BITCODE_RL segidx,
+              size_t *size)
+{
+  size_t off;
+  if (!_obj->segidx || segidx >= _obj->num_segidx)
+    return 0;
+  off = (size_t)_obj->segidx[segidx].offset;
+  if (!off || off + 0x30 > dat->size
+      || (acds_rl (&dat->chain[off]) & 0xFFFF) != 0xD5AC)
+    return 0;
+  *size = acds_rl (&dat->chain[off + 0x10]); // segsize
+  if (*size < 0x30 || *size > dat->size - off)
+    return 0;
+  return off;
+}
+
+/* The data of a data blob reference record at p (after its dataSize), in
+   the blob01 pages. Returns malloced data of *size, or NULL. */
+static BITCODE_RC *
+acds_blob (const Bit_Chain *dat, const Dwg_AcDs *_obj, size_t p, size_t end,
+           size_t *size)
+{
+  BITCODE_RLL total;
+  BITCODE_RL num_pages, i;
+  BITCODE_RC *data;
+  if (p + 32 > end)
+    return NULL;
+  total = acds_rll (&dat->chain[p]);
+  num_pages = acds_rl (&dat->chain[p + 8]);
+  if (!total || total > dat->size * 16 || p + 32 + (size_t)num_pages * 8 > end)
+    return NULL;
+  data = (BITCODE_RC *)calloc ((size_t)total, 1);
+  if (!data)
+    return NULL;
+  p += 32;
+  for (i = 0; i < num_pages; i++, p += 8)
+    {
+      size_t segsize;
+      const size_t seg
+          = acds_segment (dat, _obj, acds_rl (&dat->chain[p]), &segsize);
+      BITCODE_RLL start, len;
+      if (!seg || segsize < 0x30 + 32)
+        {
+          free (data);
+          return NULL;
+        }
+      start = acds_rll (&dat->chain[seg + 0x38]);
+      len = acds_rll (&dat->chain[seg + 0x48]);
+      if (start > total || len > total - start || len > segsize - 0x30 - 32)
+        {
+          free (data);
+          return NULL;
+        }
+      memcpy (&data[start], &dat->chain[seg + 0x30 + 32], (size_t)len);
+    }
+  *size = (size_t)total;
+  return data;
+}
+
+/* The ACIS data of the REGIONs, 3DSOLIDs, BODYs and SURFACEs with
+   has_ds_data: the AcDs data records with the SAB, by their handle. */
+static void
+acds_asm_data (const Bit_Chain *dat, Dwg_Data *restrict dwg)
+{
+  const Dwg_AcDs *_obj = &dwg->acds;
+  BITCODE_BL k, found = 0;
+  for (k = 0; k < _obj->datidx.num_entries; k++)
+    {
+      const Dwg_AcDs_DataIndex_Entry *ent = &_obj->datidx.entries[k];
+      size_t segsize, rec, start, size = 0;
+      const size_t seg = acds_segment (dat, _obj, ent->segidx, &segsize);
+      const size_t end = seg + segsize;
+      BITCODE_RLL handle;
+      BITCODE_RL datasize;
+      BITCODE_RC *data;
+      Dwg_Object *o;
+      void *_o;
+      const BITCODE_BS version = 2;
+      const BITCODE_B acis_empty = 0;
+      BITCODE_BL sab_size;
+
+      if (!seg)
+        continue;
+      rec = seg + 0x30 + ent->offset;
+      start = seg + ((size_t)acds_rl (&dat->chain[seg + 0x24]) << 4);
+      if (ent->offset > segsize || rec + 20 > end || start > end)
+        continue;
+      handle = acds_rll (&dat->chain[rec + 8]);
+      start += acds_rl (&dat->chain[rec + 16]);
+      if (start + 4 > end || start < seg)
+        continue;
+      datasize = acds_rl (&dat->chain[start]);
+      if (datasize == 0xbb106bb1)
+        data = acds_blob (dat, _obj, start + 4, end, &size);
+      else if (datasize <= end - start - 4)
+        {
+          size = datasize;
+          data = (BITCODE_RC *)malloc (size ? size : 1);
+          if (data)
+            memcpy (data, &dat->chain[start + 4], size);
+        }
+      else
+        continue;
+      if (!data)
+        continue;
+      if (size < 15
+          || (memcmp (data, "ACIS BinaryFile", 15)
+              && memcmp (data, "ASM BinaryFile", 14)))
+        {
+          free (data); // e.g. a thumbnail PNG of a BLOCK_HEADER
+          continue;
+        }
+      o = dwg_resolve_handle (dwg, handle);
+      if (!o || !dwg_obj_is_3dsolid (o))
+        {
+          LOG_WARN ("AcDs SAB data of " FORMAT_RLL " without its entity",
+                    handle);
+          free (data);
+          continue;
+        }
+      _o = o->supertype == DWG_SUPERTYPE_ENTITY
+               ? (void *)o->tio.entity->tio.UNKNOWN_ENT
+               : (void *)o->tio.object->tio.UNKNOWN_OBJ;
+      sab_size = (BITCODE_BL)size;
+      // not NUL terminated
+      if (!dwg_dynapi_entity_set_value (_o, o->name, "acis_data", &data, 0))
+        {
+          free (data);
+          continue;
+        }
+      dwg_dynapi_entity_set_value (_o, o->name, "sab_size", &sab_size, 0);
+      dwg_dynapi_entity_set_value (_o, o->name, "version", &version, 0);
+      dwg_dynapi_entity_set_value (_o, o->name, "acis_empty", &acis_empty, 0);
+      LOG_TRACE ("%s.acis_data: AcDs SAB %" PRIuSIZE " of " FORMAT_RLL "\n",
+                 o->name, size, handle);
+      found++;
+    }
+  LOG_TRACE ("%u AcDs SAB data\n", (unsigned)found);
+}
+
 /* datastorage section. Optional, since r2013
    Contains the SAB binary ACIS data, version 2
  */
@@ -3395,6 +3552,7 @@ read_2004_section_acds (Bit_Chain *restrict dat, Dwg_Data *restrict dwg)
 
   error |= acds_private (dat, dwg);
   error &= ~DWG_ERR_SECTIONNOTFOUND;
+  acds_asm_data (dat, dwg);
 
   LOG_TRACE ("\n");
   if (sec_dat.chain)
