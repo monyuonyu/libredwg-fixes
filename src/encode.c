@@ -2609,16 +2609,24 @@ encode_template (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
   LOG_INFO ("\n=======> Template: @%4zu\n", dat->byte);
   dwg->header.section[sec_id].number = 4;
   dwg->header.section[sec_id].address = dat->byte;
-  dwg->header.section[sec_id].size = 4; // always empty description
-  // Template description, empty as RS 0 (4 bytes in all, as AutoCAD)
+  // Template description, empty as RS 0 (4 bytes in all, as AutoCAD), since
+  // R2007 with the terminating 0 (RS 1, RS 0: 6 bytes, as AutoCAD)
   if (_obj->description && *_obj->description)
     bit_write_T16 (dat, _obj->description);
   else
-    bit_write_RS (dat, 0);
+    {
+      SINCE (R_2007a)
+      {
+        bit_write_RS (dat, 1);
+      }
+      bit_write_RS (dat, 0);
+    }
   LOG_TRACE ("_obj->description: %s [T16]\n", _obj->description);
   // 0 - English, 1- Metric
   bit_write_RS (dat, dwg->header_vars.MEASUREMENT);
   LOG_TRACE ("HEADER.MEASUREMENT: %d [RS]\n", dwg->header_vars.MEASUREMENT);
+  dwg->header.section[sec_id].size
+      = (dat->byte - dwg->header.section[sec_id].address) & 0xFFFFFFFF;
   return error;
 }
 
