@@ -71,8 +71,11 @@
   /* Until R_2004 here follows the sections */
   SINCE (R_2004a) {
     IF_ENCODE_FROM_EARLIER {
-      FIELD_VALUE (app_dwg_version) = FIELD_VALUE (dwg_version);
-      FIELD_VALUE (app_maint_version) = FIELD_VALUE (maint_version);
+      if (dat->version < R_2018b) // 0 in AutoCAD's R2018 files
+        {
+          FIELD_VALUE (app_dwg_version) = FIELD_VALUE (dwg_version);
+          FIELD_VALUE (app_maint_version) = FIELD_VALUE (maint_version);
+        }
       FIELD_VALUE (r2004_header_address) = 0x80;
     }
     FIELD_RC (unknown_0, 0);

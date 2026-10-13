@@ -3976,10 +3976,33 @@ dwg_encode (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
         if (_obj->maint_version <= 3)
           _obj->maint_version = _obj->maint_rel_version;
       }
-    if (!_obj->app_dwg_version)
-      _obj->app_dwg_version = _obj->dwg_version;
-    if (!_obj->app_maint_version)
-      _obj->app_maint_version = _obj->maint_version;
+    if (dwg->header.version >= R_2004a
+        && dwg->header.version != dwg->header.from_version)
+      {
+        // as AutoCAD's R2004+ files
+        _obj->zero_one_or_three = 3;
+        // written by us for this version, not by the source's application
+        if (_verp && dwg->header.version >= R_2010b)
+          _obj->dwg_version = _verp->dwg_version;
+        if (dwg->header.version >= R_2018b)
+          _obj->maint_version = 0;
+      }
+    if (dwg->header.version >= R_2018b)
+      {
+        // AutoCAD's R2018 files: the maintenance version also at 0x0B, and
+        // 0 at 0x15-0x17
+        _obj->maint_rel_version = _obj->maint_version;
+        _obj->unknown_0 = 0;
+        _obj->app_dwg_version = 0;
+        _obj->app_maint_version = 0;
+      }
+    else
+      {
+        if (!_obj->app_dwg_version)
+          _obj->app_dwg_version = _obj->dwg_version;
+        if (!_obj->app_maint_version)
+          _obj->app_maint_version = _obj->maint_version;
+      }
     if (!_obj->codepage)
       _obj->codepage = dat->codepage;
     if (!_obj->blocks_size)
