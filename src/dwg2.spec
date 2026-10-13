@@ -3412,6 +3412,12 @@ DWG_OBJECT_END
   DECODER {                                     \
     FIELD_BL (be_major, 98);                    \
     FIELD_BL (be_minor, 99);                    \
+  } else if (dat->version >= R_2007a            \
+             && dat->from_version >= R_2007a    \
+             && _obj->be_major) {               \
+    /* as read: 33/329 in AutoCAD's R2018 */    \
+    FIELD_BL (be_major, 98);                    \
+    FIELD_BL (be_minor, 99);                    \
   } else {                                      \
     PRE (R_2007a) {                             \
       VALUE_BL (25, 98);                        \
