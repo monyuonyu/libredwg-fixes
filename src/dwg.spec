@@ -4426,6 +4426,19 @@ DWG_TABLE (DIMSTYLE)
 
   SINCE (R_2007a)
     {
+      ENCODER {
+        // AutoCAD's defaults. ACadSharp rejects DIMJOGANG 0.
+        if (dat->from_version < R_2007a)
+          {
+            if (FIELD_VALUE (DIMFXL) == 0.0)
+              FIELD_VALUE (DIMFXL) = 1.0;
+            if (FIELD_VALUE (DIMJOGANG) == 0.0)
+              FIELD_VALUE (DIMJOGANG) = M_PI_2 / 2.0;
+            if (!FIELD_VALUE (DIMTFILLCLR.index)
+                && !FIELD_VALUE (DIMTFILLCLR.rgb))
+              FIELD_VALUE (DIMTFILLCLR.rgb) = 0xc1000000; // ByBlock
+          }
+      }
       FIELD_BD0 (DIMFXL, 49);
       FIELD_BD0 (DIMJOGANG, 50);
       FIELD_BS0 (DIMTFILL, 69);
@@ -4505,6 +4518,15 @@ DWG_TABLE (DIMSTYLE)
 
   IF_FREE_OR_SINCE (R_2010b)
     {
+      ENCODER {
+        if (dat->from_version < R_2010b)
+          {
+            if (FIELD_VALUE (DIMALTMZF) == 0.0)
+              FIELD_VALUE (DIMALTMZF) = 100.0;
+            if (FIELD_VALUE (DIMMZF) == 0.0)
+              FIELD_VALUE (DIMMZF) = 100.0;
+          }
+      }
       FIELD_B (DIMTXTDIRECTION, 294); // ODA documented as 295. Undocumented in ACAD
       FIELD_BD (DIMALTMZF, 0); // undocumented
       FIELD_T (DIMALTMZS, 0); // undocumented

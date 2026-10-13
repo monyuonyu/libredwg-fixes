@@ -415,6 +415,15 @@
 
   SINCE (R_2007a)
     {
+      IF_ENCODE_FROM_EARLIER {
+        // AutoCAD's defaults
+        if (FIELD_VALUE (DIMFXL) == 0.0)
+          FIELD_VALUE (DIMFXL) = 1.0;
+        if (FIELD_VALUE (DIMJOGANG) == 0.0)
+          FIELD_VALUE (DIMJOGANG) = M_PI_2 / 2.0;
+        if (!FIELD_VALUE (DIMTFILLCLR.index) && !FIELD_VALUE (DIMTFILLCLR.rgb))
+          FIELD_VALUE (DIMTFILLCLR.rgb) = 0xc1000000; // ByBlock
+      }
       FIELD_BD (DIMFXL, 40);
       FIELD_BD (DIMJOGANG, 40);
       FIELD_BS (DIMTFILL, 70);
@@ -502,6 +511,12 @@
 
   SINCE (R_2010b)
     {
+      IF_ENCODE_FROM_EARLIER {
+        if (FIELD_VALUE (DIMALTMZF) == 0.0)
+          FIELD_VALUE (DIMALTMZF) = 100.0;
+        if (FIELD_VALUE (DIMMZF) == 0.0)
+          FIELD_VALUE (DIMMZF) = 100.0;
+      }
       FIELD_B (DIMTXTDIRECTION, 70);
       FIELD_BD (DIMALTMZF, 40);
       FIELD_BD (DIMMZF, 40);
