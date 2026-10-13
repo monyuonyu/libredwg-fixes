@@ -439,6 +439,24 @@ encode_patch_RLsize (Bit_Chain *dat, size_t size_adr)
   return size;
 }
 
+/* The R2010+ header and classes sections have a 4 byte hsize after their
+   size, which is not counted in the size (AutoCAD). */
+static BITCODE_RL
+encode_patch_RLsize_hsize (Bit_Chain *dat, size_t size_adr, int has_hsize)
+{
+  BITCODE_RL size = encode_patch_RLsize (dat, size_adr);
+  if (has_hsize && size >= 4)
+    {
+      size_t pos = bit_position (dat);
+      size -= 4;
+      bit_set_position (dat, size_adr * 8);
+      bit_write_RL (dat, size);
+      LOG_TRACE ("size: " FORMAT_RL " [RL] without the hsize\n", size);
+      bit_set_position (dat, pos);
+    }
+  return size;
+}
+
 #ifdef ENCODE_PATCH_RSSIZE
 
 static BITCODE_RS
@@ -2904,7 +2922,10 @@ encode_header_vars (Dwg_Data *restrict dwg, Bit_Chain *restrict dat,
       dat->from_version = orig_from_version;
   }
 
-  encode_patch_RLsize (dat, size_adr);
+  encode_patch_RLsize_hsize (
+      dat, size_adr,
+      dat->version >= R_2007a
+          && (dwg->header.maint_version > 3 || dat->version >= R_2018));
   bit_write_CRC (dat, size_adr, 0xC0C1);
   write_sentinel (dat, DWG_SENTINEL_VARIABLE_END);
   address = dwg->header.section[0].address;
@@ -3080,15 +3101,8 @@ encode_classes (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
       // up to and including the string stream endbit
       bitsize = (BITCODE_RL)(32 + bit_position (dat) - data_start * 8);
       {
-        BITCODE_RL hsize = (BITCODE_RL)(bitsize / 8);
+        // hsize stays 0 as in AutoCAD's files (the high 32 bits of size?)
         size_t pos = bit_position (dat);
-        if (hsize_adr)
-          {
-            bit_set_position (dat, hsize_adr * 8);
-            bit_write_RL (dat, hsize);
-            LOG_TRACE ("hsize: " FORMAT_RL " [RL] @%" PRIuSIZE "\n", hsize,
-                       hsize_adr);
-          }
         bit_set_position (dat, bitsize_adr * 8);
         bit_write_RL (dat, bitsize);
         LOG_TRACE ("bitsize: " FORMAT_RL " [RL] @%" PRIuSIZE "\n", bitsize,
@@ -3100,7 +3114,7 @@ encode_classes (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
   /* Patch the section size at its beginning
    */
   assert (size_adr);
-  encode_patch_RLsize (dat, size_adr);
+  encode_patch_RLsize_hsize (dat, size_adr, hsize_adr != 0);
   bit_write_CRC (dat, size_adr, 0xC0C1);
   write_sentinel (dat, DWG_SENTINEL_CLASS_END);
   dwg->header.section[sec_id].size
