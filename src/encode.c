@@ -3929,6 +3929,17 @@ dwg_encode (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
       }
     if (_verp && !_obj->maint_rel_version)
       _obj->maint_rel_version = _verp->maint_rel_version;
+    /* R2010 and R2013 have the 4 byte hsize after the size of the header
+       and classes sections only if the maintenance version is > 3, which
+       ACadSharp takes from the byte at 0x0B and we from the one at 0x12.
+       AutoCAD has both > 3 (and we always write hsize), keep them so. */
+    if (dwg->header.version >= R_2010b && dwg->header.version < R_2018b)
+      {
+        if (_verp && _obj->maint_rel_version <= 3)
+          _obj->maint_rel_version = _verp->maint_rel_version;
+        if (_obj->maint_version <= 3)
+          _obj->maint_version = _obj->maint_rel_version;
+      }
     if (!_obj->app_dwg_version)
       _obj->app_dwg_version = _obj->dwg_version;
     if (!_obj->app_maint_version)
