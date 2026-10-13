@@ -3713,7 +3713,8 @@ DWG_OBJECT_END
 DWG_OBJECT (BLOCKSCALEACTION)
   AcDbBlockActionWithBasePt_fields; // lgtm[cpp/use-after-free] codeql[cpp/use-after-free]
   SUBCLASS (AcDbBlockScaleAction);
-  BlockAction_ConnectionPts (conn_pts, 0, 3, 94, 303);
+  // after the 2 of AcDbBlockActionWithBasePt
+  BlockAction_ConnectionPts (conn_pts, 2, 3, 92, 301);
   START_OBJECT_HANDLE_STREAM;
 DWG_OBJECT_END
 
