@@ -535,7 +535,10 @@ free_3dsolid (Dwg_Object *restrict obj, Dwg_Entity_3DSOLID *restrict _obj)
         }                                                                     \
     }                                                                         \
   FIELD_B (acis_empty_bit, 0); /* ?? */                                       \
-  if (FIELD_VALUE (version) > 1)                                              \
+  /* Not in the DWG: AutoCAD's R2007-R2010 3DSOLIDs have only the unknown */ \
+  /* BL after the ACIS empty bit (ACadSharp). num_materials read it, and */  \
+  /* the unknown BL then 34 bits of the handle stream. */                    \
+  if (FIELD_VALUE (version) > 1 && !IF_IS_DECODER && !IF_IS_ENCODER)         \
     {                                                                         \
       SINCE (R_2007a)                                                         \
       {                                                                       \
@@ -586,14 +589,11 @@ free_3dsolid (Dwg_Object *restrict obj, Dwg_Entity_3DSOLID *restrict _obj)
       SUBCLASS (AcDb3dSolid);                                                 \
       FIELD_HANDLE (history_id, 4, 350);                                      \
     }                                                                         \
-  } else if ((FIELD_VALUE (version) > 1                                       \
-              /* all R2007+ 3DSOLIDs (ACadSharp), also R2013+ ones with the */\
-              /* SAB in the AcDs (AutoCAD's R2018) */                         \
-              || (dat->version >= R_2007a                                     \
-                  && obj->fixedtype == DWG_TYPE__3DSOLID))                    \
-             && (!IF_IS_DECODER || AVAIL_BITS (hdl_dat) >= 8)                 \
-             /* R2007+ (ACadSharp, AutoCAD's R2004 drawings have none) */     \
-             && (!IF_IS_ENCODER || dat->version >= R_2007a)) {                \
+  } else if (/* all R2007+ 3DSOLIDs (ACadSharp), also with the SAB in the */\
+             /* AcDs (AutoCAD's R2018), not REGION (AutoCAD's R2010) */       \
+             dat->version >= R_2007a                                          \
+             && obj->fixedtype == DWG_TYPE__3DSOLID                           \
+             && (!IF_IS_DECODER || AVAIL_BITS (hdl_dat) >= 8)) {              \
       FIELD_HANDLE (history_id, 4, 350);                                      \
   }                                                                           \
   FREE { FIELD_HANDLE (history_id, 4, 350); }
