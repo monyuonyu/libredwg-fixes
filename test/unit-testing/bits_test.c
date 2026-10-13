@@ -1919,9 +1919,9 @@ main (int argc, char const *argv[])
     bitchain.version = R_2007; // @65.6
     // wlen = 8
     bit_write_T (&bitchain, (char *)"Teigha\\U+2122"); // convert to unicode
-    // containing the ending 0L
+    // without the ending 0, as AutoCAD
     // printf ("TU @%" PRIuSIZE ".%u\n", bitchain.byte, bitchain.bit);
-    if (bitchain.byte == 83 && bitchain.bit == 0 && bitchain.chain[79] == 0x22
+    if (bitchain.byte == 81 && bitchain.bit == 0 && bitchain.chain[79] == 0x22
         && bitchain.chain[80] == 0x21)
       pass ();
     else
@@ -1938,7 +1938,7 @@ main (int argc, char const *argv[])
     ws = (BITCODE_TU)wstr;
 #endif
     // printf ("@%" PRIuSIZE ".%u\n", bitchain.byte, bitchain.bit);
-    if (bitchain.byte == 83 && bitchain.bit == 0 &&
+    if (bitchain.byte == 81 && bitchain.bit == 0 &&
 #ifndef WORDS_BIGENDIAN
         wstr && !memcmp (wstr, exp, sizeof (exp))
 #else
