@@ -2641,6 +2641,24 @@ DWG_ENTITY (SPLINE)
     }
   }
   SINCE (R_2013b) {
+    ENCODER {
+      // as AutoCAD: control points with a custom knot parameter, fit
+      // points with method fit points and use knot parameter (chord).
+      // ACadSharp takes the scenario from these.
+      if (dat->from_version < R_2013b && !(dwg->opts & DWG_OPTS_IN))
+        {
+          if (FIELD_VALUE (scenario) == 2)
+            {
+              FIELD_VALUE (splineflags) = 9;
+              FIELD_VALUE (knotparam) = 0;
+            }
+          else
+            {
+              FIELD_VALUE (splineflags) = FIELD_VALUE (closed_b) ? 4 : 0;
+              FIELD_VALUE (knotparam) = 15;
+            }
+        }
+    }
     FIELD_BL (splineflags, 0);
     LOG_SPLINE_SPLINEFLAGS
     FIELD_BL (knotparam, 0);
