@@ -11719,6 +11719,15 @@ EXPORT char *dwg_encrypt_SAT1 (BITCODE_BL blocksize,
    encrypted acis_data anymore, rather the converted from SAB for DXF */
 EXPORT int dwg_convert_SAB_to_SAT1 (Dwg_Entity_3DSOLID *restrict _obj);
 
+/* Converts SAB to SAT text, and SAT text to SAB "ACIS BinaryFile". Both
+   malloced, or NULL. */
+EXPORT char *dwg_convert_SAB_to_SAT (const BITCODE_RC *restrict sab,
+                                     const size_t size,
+                                     size_t *restrict satsize);
+EXPORT BITCODE_RC *dwg_convert_SAT_to_SAB (const char *restrict sat,
+                                           const size_t size,
+                                           size_t *restrict sabsize);
+
 
 /* The old color.index 0-256 */
 typedef struct rgbpalette {

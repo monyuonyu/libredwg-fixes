@@ -3790,15 +3790,18 @@ acds_as_read (const Dwg_Data *dwg, const Bit_Chain *dat)
          && dwg->header.from_version >= R_2013b && !(dwg->opts & DWG_OPTS_IN);
 }
 
-/* The SAB of an ACIS entity for the AcDs, or NULL. */
+/* The SAB of an ACIS entity for the AcDs, or NULL. The SAT of version 1
+   is converted to SAB, as AutoCAD does: then *alloced is set, to free it. */
 static BITCODE_RC *
-acds_entity_sab (Dwg_Object *restrict obj, size_t *restrict size)
+acds_entity_sab (Dwg_Object *restrict obj, size_t *restrict size,
+                 int *restrict alloced)
 {
   void *_obj;
   BITCODE_BS version = 0;
   BITCODE_RC *acis_data = NULL;
   BITCODE_BL sab_size = 0;
 
+  *alloced = 0;
   if (obj->supertype != DWG_SUPERTYPE_ENTITY || !dwg_obj_is_3dsolid (obj))
     return NULL;
   _obj = obj->tio.entity->tio.UNKNOWN_ENT;
@@ -3806,14 +3809,28 @@ acds_entity_sab (Dwg_Object *restrict obj, size_t *restrict size)
       || !dwg_dynapi_entity_value (_obj, obj->name, "acis_data", &acis_data,
                                    NULL)
       || !dwg_dynapi_entity_value (_obj, obj->name, "sab_size", &sab_size,
-                                   NULL))
+                                   NULL)
+      || !acis_data)
     return NULL;
-  if (version == 2 && acis_data && sab_size > 15
+  if (version == 2 && sab_size > 15
       && (!memcmp (acis_data, "ACIS BinaryFile", 15)
           || !memcmp (acis_data, "ASM BinaryFile", 14)))
     {
       *size = sab_size;
       return acis_data;
+    }
+  if (version == 1 && *acis_data)
+    {
+      BITCODE_RC *sab = dwg_convert_SAT_to_SAB (
+          (const char *)acis_data, strlen ((char *)acis_data), size);
+      if (!sab)
+        {
+          LOG_WARN ("%s " FORMAT_HV ": invalid SAT, not converted to SAB",
+                    obj->name, obj->handle.value);
+          return NULL;
+        }
+      *alloced = 1;
+      return sab;
     }
   return NULL;
 }
@@ -3827,8 +3844,14 @@ acds_mark_entities (Dwg_Data *restrict dwg)
     {
       Dwg_Object *obj = &dwg->object[i];
       size_t size;
-      if (obj->supertype == DWG_SUPERTYPE_ENTITY && dwg_obj_is_3dsolid (obj))
-        obj->tio.entity->has_ds_data = acds_entity_sab (obj, &size) ? 1 : 0;
+      int alloced;
+      BITCODE_RC *sab;
+      if (obj->supertype != DWG_SUPERTYPE_ENTITY || !dwg_obj_is_3dsolid (obj))
+        continue;
+      sab = acds_entity_sab (obj, &size, &alloced);
+      obj->tio.entity->has_ds_data = sab ? 1 : 0;
+      if (alloced)
+        free (sab);
     }
 }
 
@@ -3837,6 +3860,7 @@ typedef struct _acds_record
   BITCODE_RLL handle;
   BITCODE_RC *data;
   size_t size;
+  int alloced;
 } acds_record;
 
 static int
@@ -3992,14 +4016,16 @@ encode_acds (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
     {
       Dwg_Object *obj = &dwg->object[i];
       size_t size;
+      int alloced;
       BITCODE_RC *data;
       if (obj->supertype != DWG_SUPERTYPE_ENTITY
           || !obj->tio.entity->has_ds_data
-          || !(data = acds_entity_sab (obj, &size)))
+          || !(data = acds_entity_sab (obj, &size, &alloced)))
         continue;
       recs[num_recs].handle = obj->handle.value;
       recs[num_recs].data = data;
       recs[num_recs].size = size;
+      recs[num_recs].alloced = alloced;
       if (size > ACDS_MAX_RECORD)
         num_pages += (BITCODE_BL)((size + ACDS_MAX_PAGE - 1) / ACDS_MAX_PAGE);
       num_recs++;
@@ -4017,6 +4043,9 @@ encode_acds (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
                                             sizeof (Dwg_AcDs_SegmentIndex));
   if (!segidx)
     {
+      for (k = 0; k < num_recs; k++)
+        if (recs[k].alloced)
+          free (recs[k].data);
       free (recs);
       return DWG_ERR_OUTOFMEM;
     }
@@ -4183,6 +4212,9 @@ encode_acds (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
   dat->byte = off;
   LOG_TRACE ("AcDs: %u SAB records, %u blob pages, size %" PRIuSIZE "\n",
              (unsigned)num_recs, (unsigned)num_pages, off);
+  for (k = 0; k < num_recs; k++)
+    if (recs[k].alloced)
+      free (recs[k].data);
   free (segidx);
   free (recs);
   return 0;
