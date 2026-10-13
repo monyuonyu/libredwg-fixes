@@ -2454,11 +2454,7 @@ bit_write_T (Bit_Chain *restrict dat, BITCODE_T restrict s)
                     }
                 }
               *ws = 0;
-              // bit_write_TU (dat, orig);
-              length = (ws - orig) + 1;
-              bit_write_BS (dat, (BITCODE_BS)length);
-              for (i = 0; i < length; i++)
-                bit_write_RS (dat, orig[i]);
+              bit_write_TU (dat, orig);
               free (orig);
             }
         }
@@ -2735,8 +2731,9 @@ bit_write_TU (Bit_Chain *restrict dat, BITCODE_TU restrict chain)
 {
   size_t i, length;
 
+  // without the terminating 0, as AutoCAD
   if (chain)
-    length = bit_wcs2len (chain) + 1;
+    length = bit_wcs2len (chain);
   else
     length = 0;
   if (length > UINT16_MAX)
@@ -2744,7 +2741,6 @@ bit_write_TU (Bit_Chain *restrict dat, BITCODE_TU restrict chain)
       loglevel = dat->opts & DWG_OPTS_LOGLEVEL;
       LOG_WARN ("Overlong string truncated (len=%" PRIuSIZE ")", length);
       length = UINT16_MAX;
-      chain[UINT16_MAX - 1] = '\0';
     }
 
   bit_write_BS (dat, (BITCODE_BS)length);
