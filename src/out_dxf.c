@@ -2135,6 +2135,61 @@ dxf_check_history_id (Bit_Chain *restrict dat, const Dwg_Object *restrict obj,
     }
 }
 
+/* The encrypted SAT of the blocks, which may split a line anywhere, as
+   DXF 1 lines, continued in 3 lines after 255 chars, with ^ as "^ ". */
+static int
+dxf_sat_lines (Bit_Chain *restrict dat, Dwg_Entity_3DSOLID *restrict _obj)
+{
+  size_t total = 0, pos = 0;
+  char *all;
+  BITCODE_BL i;
+
+  for (i = 0; i < _obj->num_blocks; i++)
+    if (_obj->encr_sat_data[i])
+      total += _obj->block_size[i];
+  all = (char *)malloc (total + 1);
+  if (!all)
+    return DWG_ERR_OUTOFMEM;
+  total = 0;
+  for (i = 0; i < _obj->num_blocks; i++)
+    if (_obj->encr_sat_data[i])
+      {
+        memcpy (&all[total], _obj->encr_sat_data[i], _obj->block_size[i]);
+        total += _obj->block_size[i];
+      }
+  while (pos < total)
+    {
+      size_t end = pos, lend;
+      int code = 1;
+      while (end < total && all[end] != '\n')
+        end++;
+      lend = end;
+      if (lend > pos && all[lend - 1] == '\r')
+        lend--;
+      while (pos < lend)
+        {
+          // max. 255 chars, with the escaped ^
+          size_t l = 0, w = 0;
+          while (pos + l < lend && w + (all[pos + l] == '^' ? 2 : 1) <= 255)
+            w += all[pos + l++] == '^' ? 2 : 1;
+          GROUP (code);
+          for (size_t k = 0; k < l; k++)
+            {
+              if (all[pos + k] == '^')
+                fprintf (dat->fh, "^ ");
+              else
+                fputc (all[pos + k], dat->fh);
+            }
+          fprintf (dat->fh, "\r\n");
+          pos += l;
+          code = 3;
+        }
+      pos = end + 1;
+    }
+  free (all);
+  return 0;
+}
+
 static int
 dxf_3dsolid (Bit_Chain *restrict dat, const Dwg_Object *restrict obj,
              Dwg_Entity_3DSOLID *restrict _obj)
@@ -2174,54 +2229,7 @@ dxf_3dsolid (Bit_Chain *restrict dat, const Dwg_Object *restrict obj,
           _obj->version = 1; // conversion complete
         }
       FIELD_BS (version, 70); // always 1
-      for (i = 0; i < FIELD_VALUE (num_blocks); i++)
-        {
-          char *s = FIELD_VALUE (encr_sat_data[i]);
-          // FIXME
-          // only DXF 1, always keep len <255
-          // int len = _obj->_dxf_sab_converted ? FIELD_VALUE (block_size[i]) :
-          // strlen (s);
-          int len = FIELD_VALUE (block_size[i]);
-          while (len > 0)
-            {
-              char *n = strchr (s, '\n');
-              int l = len > 255 ? 255 : len;
-              char *caret = strchr (s, '^');
-              if (n && (n - s < len))
-                {
-                  l = n - s;
-                }
-              if (l)
-                {
-                  GROUP (1);
-                  // replace "^" by "^ "
-                  while (caret && caret < n)
-                    {
-                      int lc = caret - s;
-                      fprintf (dat->fh, "%.*s^ ", lc, s);
-                      lc++;
-                      l -= lc;
-                      len -= lc;
-                      s += lc;
-                      caret = l > 1 ? strchr (s, '^') : NULL;
-                    }
-                  if (l > 255)
-                    LOG_ERROR ("Overlong SAT line \"%s\" len=%d", s, l);
-                  if (s[l - 1] == '\r')
-                    fprintf (dat->fh, "%.*s\n", l, s);
-                  else
-                    fprintf (dat->fh, "%.*s\r\n", l, s);
-                  l++;
-                  len -= l;
-                  s += l;
-                }
-              else
-                {
-                  len--;
-                  s++;
-                }
-            }
-        }
+      error |= dxf_sat_lines (dat, _obj);
     }
   dxf_check_history_id (dat, obj, _obj);
   // the rest is done in COMMON_3DSOLID in the spec.

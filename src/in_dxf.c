@@ -3059,17 +3059,23 @@ add_3DSOLID_encr (Dwg_Object *restrict obj, Bit_Chain *restrict dat,
               LOG_ERROR ("Out of memory");
               return NULL;
             }
+          // a 1 starts a new line, a 3 continues the line
+          if (pair->code == 1)
+            strcat ((char *)o->encr_sat_data[0], "\n");
           strcat ((char *)o->encr_sat_data[0], pair->value.s.ptr);
         }
       if (pair->code == 1)
-        {
-          strcat ((char *)o->encr_sat_data[0], "\n");
-          // For the replacement of "^ " with "^" see below
-          i++;
-        }
+        // For the replacement of "^ " with "^" see below
+        i++;
 
       dxf_free_pair (pair);
       pair = dxf_read_pair (dat);
+    }
+  // the end of the last line
+  if (total && o->encr_sat_data[0])
+    {
+      strcat ((char *)o->encr_sat_data[0], "\n");
+      total = strlen (o->encr_sat_data[0]);
     }
   LOG_TRACE ("%s.block_size[0]: %" PRIuSIZE "\n", obj->name, total);
 
