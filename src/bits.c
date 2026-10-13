@@ -368,6 +368,22 @@ bit_write_RS (Bit_Chain *dat, BITCODE_RS value)
   bit_write_RC (dat, value >> 8);
 }
 
+/** Write the size in bits of the R2007+ string stream, which is read
+    backwards from its has_strings bit: one RS, or with 0x8000 set, the
+    high bits in a RS before it.
+ */
+void
+bit_write_strings_size (Bit_Chain *dat, size_t bits)
+{
+  if (bits > 0x7FFF)
+    {
+      bit_write_RS (dat, (BITCODE_RS)((bits >> 15) & 0xFFFF));
+      bit_write_RS (dat, (BITCODE_RS)((bits & 0x7FFF) | 0x8000));
+    }
+  else
+    bit_write_RS (dat, (BITCODE_RS)bits);
+}
+
 /** Read 1 raw short (BE).
  */
 BITCODE_RS

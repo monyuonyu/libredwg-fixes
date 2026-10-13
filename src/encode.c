@@ -2809,22 +2809,15 @@ encode_header_vars (Dwg_Data *restrict dwg, Bit_Chain *restrict dat,
       size_t main_end = bit_position (dat);
       size_t str_bits = bit_position (&str_dat);
       size_t hdl_bits = bit_position (&hdl_dat);
-      BITCODE_RS data_size = (BITCODE_RS)str_bits;
 
       // Append string stream data
       if (str_bits)
         bit_copy_chain (dat, &str_dat);
       // String footer: data_size(RS) + endbit(B)
-      if (data_size & 0x8000)
-        {
-          bit_write_RS (dat, (data_size >> 15) & 0x7FFF);
-          bit_write_RS (dat, (data_size & 0x7FFF) | 0x8000);
-        }
-      else
-        bit_write_RS (dat, data_size);
+      bit_write_strings_size (dat, str_bits);
       bit_write_B (dat, str_bits ? 1 : 0); // endbit
-      LOG_TRACE ("header string stream data_size: %u endbit: %d\n",
-                 (unsigned)data_size, str_bits ? 1 : 0);
+      LOG_TRACE ("header string stream data_size: %" PRIuSIZE " endbit: %d\n",
+                 str_bits, str_bits ? 1 : 0);
 
       // bitsize: 32 (bitsize field) + main + string + footer
       bitsize = (BITCODE_RL)(32 + bit_position (dat) - data_start * 8);
@@ -2978,7 +2971,7 @@ encode_classes (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
     // Phase 2: write string data
     {
       size_t str_start = bit_position (dat);
-      BITCODE_RS data_size;
+      size_t data_size;
       for (j = 0; j < dwg->num_classes; j++)
         {
           Dwg_Class *klass = &dwg->dwg_class[j];
@@ -2990,17 +2983,11 @@ encode_classes (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
             bit_write_T (dat, klass->dxfname);
         }
       // Phase 3: string stream footer
-      data_size = (BITCODE_RS)(bit_position (dat) - str_start);
-      if (data_size & 0x8000)
-        {
-          bit_write_RS (dat, (data_size >> 15) & 0x7FFF);
-          bit_write_RS (dat, (data_size & 0x7FFF) | 0x8000);
-        }
-      else
-        bit_write_RS (dat, data_size);
+      data_size = bit_position (dat) - str_start;
+      bit_write_strings_size (dat, data_size);
       bit_write_B (dat, 1); // endbit: has strings
-      LOG_TRACE ("string stream data_size: %u endbit: 1\n",
-                 (unsigned)data_size);
+      LOG_TRACE ("string stream data_size: %" PRIuSIZE " endbit: 1\n",
+                 data_size);
     }
   }
   else

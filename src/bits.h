@@ -113,6 +113,7 @@ void bit_write_RC (Bit_Chain *dat, unsigned char value);
 
 BITCODE_RS bit_read_RS (Bit_Chain *dat);
 void bit_write_RS (Bit_Chain *dat, BITCODE_RS value);
+void bit_write_strings_size (Bit_Chain *dat, size_t bits);
 BITCODE_BS bit_read_RS_BE (Bit_Chain *dat);
 void bit_write_RS_BE (Bit_Chain *dat, BITCODE_BS value);
 

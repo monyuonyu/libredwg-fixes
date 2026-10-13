@@ -832,17 +832,12 @@
     LOG_INSANE ("-str_dat: %" PRIuSIZE " bits, chain %p, dat chain %p\n",     \
                 _str_bits, (void*)str_dat->chain, (void*)dat->chain);         \
     if (_str_bits) {                                                          \
-      BITCODE_RS _data_size = (BITCODE_RS)_str_bits;                          \
       bit_copy_chain (dat, str_dat);                                          \
-      if (_data_size & 0x8000) {                                              \
-        bit_write_RS (dat, (_data_size >> 15) & 0x7FFF);                      \
-        bit_write_RS (dat, (_data_size & 0x7FFF) | 0x8000);                   \
-      } else                                                                  \
-        bit_write_RS (dat, _data_size);                                       \
+      bit_write_strings_size (dat, _str_bits);                                \
       bit_write_B (dat, 1);                                                   \
       obj->has_strings = 1;                                                   \
-      LOG_TRACE ("-obj string footer: data_size %u, has_strings 1\n",         \
-                 (unsigned)_data_size);                                        \
+      LOG_TRACE ("-obj string footer: data_size %" PRIuSIZE                   \
+                 ", has_strings 1\n", _str_bits);                             \
     } else {                                                                  \
       bit_write_B (dat, 0);                                                   \
       obj->has_strings = 0;                                                   \
