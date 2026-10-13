@@ -355,6 +355,12 @@ encode_3dsolid (Bit_Chain *dat, Bit_Chain *hdl_dat, Dwg_Object *restrict obj,
   int acis_data_idx = 0;
   int error = 0;
 
+  // R2013+: no ACIS empty bit, the SAB is in the AcDsPrototype_1b
+  // DataStorage section (as decode_3dsolid)
+  SINCE (R_2013b)
+    {
+      return error;
+    }
   FIELD_B (acis_empty, 290);
   if (!FIELD_VALUE (acis_empty))
     {
@@ -580,7 +586,10 @@ free_3dsolid (Dwg_Object *restrict obj, Dwg_Entity_3DSOLID *restrict _obj)
       SUBCLASS (AcDb3dSolid);                                                 \
       FIELD_HANDLE (history_id, 4, 350);                                      \
     }                                                                         \
-  } else if (FIELD_VALUE (version) > 1                                        \
+  } else if ((FIELD_VALUE (version) > 1                                       \
+              /* R2013+ 3DSOLID: the SAB is in the AcDs (AutoCAD's R2018) */  \
+              || (dat->version >= R_2013b                                     \
+                  && obj->fixedtype == DWG_TYPE__3DSOLID))                    \
              && (!IF_IS_DECODER || AVAIL_BITS (hdl_dat) >= 8)                 \
              /* R2007+ (ACadSharp, AutoCAD's R2004 drawings have none) */     \
              && (!IF_IS_ENCODER || dat->version >= R_2007a)) {                \
