@@ -1850,6 +1850,8 @@ dwg_free (Dwg_Data *dwg)
           FREE_IF (dwg->acis_sab_hdl[i]);
         }
       FREE_IF (dwg->acis_sab_hdl);
+      FREE_IF (dwg->acds_raw);
+      dwg->acds_raw_size = 0;
       FREE_IF (dwg->object);
       if (dwg->object_map)
         {

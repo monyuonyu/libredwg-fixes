@@ -11461,6 +11461,12 @@ typedef struct _dwg_struct
   // for speedup dwg_add_handleref
   Dwg_Object_Ref **object_ordered_ref; /*! list of all ordered objects refs */
   BITCODE_BL num_object_ordered_refs;  /*! number of ordered objects refs */
+
+  /* The decompressed AcDb:AcDsPrototype_1b section of an R2013+ DWG, as
+     read. Written again as is to R2013+, as long as we cannot encode the
+     acds. It has the SAB of the 3DSOLIDs with has_ds_data. */
+  BITCODE_TF acds_raw;
+  size_t acds_raw_size;
 } Dwg_Data;
 
 #define DWG_OPTS_LOGLEVEL 0xf

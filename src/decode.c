@@ -3381,6 +3381,14 @@ read_2004_section_acds (Bit_Chain *restrict dat, Dwg_Data *restrict dwg)
 
   LOG_TRACE ("AcDs datastorage (%" PRIuSIZE ")\n-------------------\n",
              sec_dat.size);
+  // keep it to write it again as is
+  FREE_IF (dwg->acds_raw);
+  dwg->acds_raw_size = 0;
+  if (sec_dat.size && (dwg->acds_raw = (BITCODE_TF)malloc (sec_dat.size)))
+    {
+      memcpy (dwg->acds_raw, sec_dat.chain, sec_dat.size);
+      dwg->acds_raw_size = sec_dat.size;
+    }
   old_dat = *dat;
   dat = &sec_dat; // restrict in size
   bit_chain_set_version (&old_dat, dat);

@@ -1664,18 +1664,21 @@ r2004_compress (const BITCODE_RC *src, const uint32_t size, BITCODE_RC *dst)
 /* The sections in the order of the section map. The ids count down from the
    last one to 1, the empty section first is 0. */
 static const Dwg_Section_Type r2004_map_order[]
-    = { SECTION_SECURITY,       SECTION_FILEDEPLIST, SECTION_VBAPROJECT,
-        SECTION_APPINFOHISTORY, SECTION_APPINFO,     SECTION_PREVIEW,
-        SECTION_SUMMARYINFO,    SECTION_REVHISTORY,  SECTION_OBJECTS,
-        SECTION_OBJFREESPACE,   SECTION_TEMPLATE,    SECTION_HANDLES,
-        SECTION_CLASSES,        SECTION_AUXHEADER,   SECTION_HEADER };
-/* and the order of their pages in the file */
+    = { SECTION_ACDS,       SECTION_SECURITY,       SECTION_FILEDEPLIST,
+        SECTION_VBAPROJECT, SECTION_APPINFOHISTORY, SECTION_APPINFO,
+        SECTION_PREVIEW,    SECTION_SUMMARYINFO,    SECTION_REVHISTORY,
+        SECTION_OBJECTS,    SECTION_OBJFREESPACE,   SECTION_TEMPLATE,
+        SECTION_HANDLES,    SECTION_CLASSES,        SECTION_AUXHEADER,
+        SECTION_HEADER };
+/* and the order of their pages in the file (the AcDs of AutoCAD's
+   example_2018 after the AppInfoHistory, with the highest id) */
 static const Dwg_Section_Type r2004_stream_order[]
-    = { SECTION_SUMMARYINFO,  SECTION_PREVIEW,        SECTION_VBAPROJECT,
-        SECTION_APPINFO,      SECTION_APPINFOHISTORY, SECTION_FILEDEPLIST,
-        SECTION_REVHISTORY,   SECTION_SECURITY,       SECTION_OBJECTS,
-        SECTION_OBJFREESPACE, SECTION_TEMPLATE,       SECTION_HANDLES,
-        SECTION_CLASSES,      SECTION_AUXHEADER,      SECTION_HEADER };
+    = { SECTION_SUMMARYINFO, SECTION_PREVIEW,        SECTION_VBAPROJECT,
+        SECTION_APPINFO,     SECTION_APPINFOHISTORY, SECTION_ACDS,
+        SECTION_FILEDEPLIST, SECTION_REVHISTORY,     SECTION_SECURITY,
+        SECTION_OBJECTS,     SECTION_OBJFREESPACE,   SECTION_TEMPLATE,
+        SECTION_HANDLES,     SECTION_CLASSES,        SECTION_AUXHEADER,
+        SECTION_HEADER };
 
 typedef struct _r2004_page
 {
@@ -1709,6 +1712,7 @@ r2004_section_compressed (const Dwg_Section_Type type)
     case SECTION_OBJFREESPACE:
     case SECTION_OBJECTS:
     case SECTION_REVHISTORY:
+    case SECTION_ACDS:
       return 2;
     default:
       return 1;
@@ -4814,6 +4818,17 @@ dwg_encode (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
             }
             break;
           case SECTION_ACDS:
+            // as read from an R2013+ DWG, for the SAB of the 3DSOLIDs
+            if (dwg->acds_raw && dwg->acds_raw_size && dat->version >= R_2013b
+                && dwg->header.from_version >= R_2013b
+                && !(dwg->opts & DWG_OPTS_IN))
+              {
+                bit_chain_init_dat (&sec_dat[type], dwg->acds_raw_size, dat);
+                bit_write_TF (&sec_dat[type], dwg->acds_raw,
+                              dwg->acds_raw_size);
+                LOG_TRACE ("AcDs as read: %" PRIuSIZE "\n",
+                           dwg->acds_raw_size);
+              }
             {
 #if 0
               Dwg_AcDs *_obj = &dwg->acds;
