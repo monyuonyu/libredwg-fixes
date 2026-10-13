@@ -3086,19 +3086,20 @@ add_3DSOLID_encr (Dwg_Object *restrict obj, Bit_Chain *restrict dat,
       o->acis_data = (BITCODE_RC *)xcalloc (1, total + 1);
       if (!o->acis_data)
         return NULL;
+      // "^ " is the escaped ^ in DXF, the encrypted A. Also in the
+      // encrypted data for the DWG.
       for (i = 0; i < total; i++)
         {
-          if (o->encr_sat_data[0][i] == '^' && i <= total
-              && o->encr_sat_data[0][i + 1] == ' ')
-            {
-              o->acis_data[idx++] = 'A';
-              i++;
-            }
-          else if (o->encr_sat_data[0][i] <= 32)
-            o->acis_data[idx++] = o->encr_sat_data[0][i];
+          const char c = o->encr_sat_data[0][i];
+          o->encr_sat_data[0][idx] = c;
+          if (c == '^' && i + 1 < total && o->encr_sat_data[0][i + 1] == ' ')
+            i++;
+          if ((BITCODE_RC)c <= 32)
+            o->acis_data[idx++] = (BITCODE_RC)c;
           else
-            o->acis_data[idx++] = 159 - o->encr_sat_data[0][i];
+            o->acis_data[idx++] = 159 - (BITCODE_RC)c;
         }
+      o->encr_sat_data[0][idx] = '\0';
       o->acis_data[idx] = '\0';
       o->block_size[0] = idx;
       LOG_TRACE ("%s.acis_data:\n%s\n", obj->name, o->acis_data);
