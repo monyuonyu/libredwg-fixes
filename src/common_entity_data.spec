@@ -523,7 +523,8 @@
     {
 #ifndef DEBUG_CLASSES
 #ifdef IS_ENCODER
-      if (FIELD_VALUE (material_flags) == 3)
+      // MATERIAL objects from DXF are written as placeholders
+      if (FIELD_VALUE (material_flags) == 3 && dwg->opts & DWG_OPTS_INDXF)
         {
           LOG_WARN ("Disabling MATERIAL handle\n");
             FIELD_VALUE (material_flags) = 0;

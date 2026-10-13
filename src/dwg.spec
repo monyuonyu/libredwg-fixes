@@ -3507,7 +3507,8 @@ DWG_TABLE (LAYER)
   SINCE (R_2007a) {
     ENCODER {
 #ifndef DEBUG_CLASSES
-      if (_obj->material)
+      // MATERIAL objects from DXF are written as placeholders
+      if (_obj->material && dwg->opts & DWG_OPTS_INDXF)
         {
           _obj->material->absolute_ref = 0;
           _obj->material->handleref.value = 0;

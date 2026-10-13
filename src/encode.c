@@ -5285,6 +5285,9 @@ disable_3DSOLID_materials (Dwg_Object *obj)
   BITCODE_BL num_materials = 0;
   // or some child of it
   Dwg_Entity_BODY *_obj = obj->tio.entity->tio.BODY;
+  // MATERIAL objects from DXF are written as placeholders
+  if (!(obj->parent->opts & DWG_OPTS_INDXF))
+    return;
   if (dwg_dynapi_entity_value (_obj, obj->name, "num_materials",
                                &num_materials, NULL)
       && num_materials)
