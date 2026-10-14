@@ -2655,7 +2655,10 @@ DWG_ENTITY (SPLINE)
       // as AutoCAD: control points with a custom knot parameter, fit
       // points with method fit points and use knot parameter (chord).
       // ACadSharp takes the scenario from these.
-      if (dat->from_version < R_2013b && !(dwg->opts & DWG_OPTS_IN))
+      // DXF has them not: from DXF, unless set otherwise
+      if ((dat->from_version < R_2013b && !(dwg->opts & DWG_OPTS_IN))
+          || ((dwg->opts & DWG_OPTS_INDXF) && !FIELD_VALUE (knotparam)
+              && !(FIELD_VALUE (splineflags) & ~9)))
         {
           if (FIELD_VALUE (scenario) == 2)
             {
