@@ -4459,8 +4459,9 @@ DWG_TABLE (DIMSTYLE)
   SINCE (R_2007a)
     {
       ENCODER {
-        // AutoCAD's defaults. ACadSharp rejects DIMJOGANG 0.
-        if (dat->from_version < R_2007a)
+        // AutoCAD's defaults. ACadSharp rejects DIMJOGANG 0. Also from
+        // DXF, which has them not before R2007, as 0 not at all.
+        if (dat->from_version < R_2007a || (dat->opts & DWG_OPTS_IN))
           {
             if (FIELD_VALUE (DIMFXL) == 0.0)
               FIELD_VALUE (DIMFXL) = 1.0;
@@ -4551,7 +4552,7 @@ DWG_TABLE (DIMSTYLE)
   IF_FREE_OR_SINCE (R_2010b)
     {
       ENCODER {
-        if (dat->from_version < R_2010b)
+        if (dat->from_version < R_2010b || (dat->opts & DWG_OPTS_IN))
           {
             if (FIELD_VALUE (DIMALTMZF) == 0.0)
               FIELD_VALUE (DIMALTMZF) = 100.0;
