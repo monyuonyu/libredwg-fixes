@@ -1249,7 +1249,8 @@ dxf_CMC (Bit_Chain *restrict dat, Dwg_Color *restrict color, const int dxf,
     {
       if (dat->from_version < R_2004)
         bit_upconvert_CMC (dat, color);
-      if (dxf >= 90)
+      // 90-99 is the RGB, 176-178 of DIMSTYLE the color index only
+      if (dxf >= 90 && dxf < 100)
         {
           VALUE_RLd (color->rgb, dxf);
           return;
@@ -1276,7 +1277,7 @@ dxf_CMC (Bit_Chain *restrict dat, Dwg_Color *restrict color, const int dxf,
         {
           VALUE_RSd (color->index, dxf);
         }
-      if (color->method != 0xc2)
+      if (color->method != 0xc2 || dxf > 67)
         return;
       VALUE_RL (color->rgb, dxf + 420 - 62);
       if (color->flag & 2 && color->book_name)
