@@ -707,7 +707,9 @@ DWG_ENTITY (TABLE)
   SINCE (R_2010b) //AC1024
     {
 #ifdef IS_ENCODER
-      if (dwg->header.from_version < R_2010b)
+      // DXF has the cells as before R2010
+      if (dwg->header.from_version < R_2010b
+          || (dwg->opts & DWG_OPTS_INDXF))
         upconvert_TABLE (obj);
 #endif
       FIELD_RC (unknown_rc, 0);
