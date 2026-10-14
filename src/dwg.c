@@ -374,7 +374,10 @@ dxf_read_file (const char *restrict filename, Dwg_Data *restrict dwg)
   version = dwg->header.version;
   memset (dwg, 0, sizeof (Dwg_Data));
   dwg->opts = loglevel | DWG_OPTS_INDXF;
-  dwg->header.version = version;
+  /* The DXF strings stay UTF-8, as the encoder of R2007+ expects them from
+     DXF (see bit_write_T). But in_dxf and dynapi make TU strings, when the
+     version is R2007+: read as R2004, then the R2007+ version again. */
+  dwg->header.version = version >= R_2007a ? R_2004 : version;
 
   memset (&dat, 0, sizeof (Bit_Chain));
 #  ifdef HAVE_SYS_STAT_H
@@ -390,7 +393,7 @@ dxf_read_file (const char *restrict filename, Dwg_Data *restrict dwg)
   dat.byte = 0;
   dat.bit = 0;
   dat.from_version = dwg->header.from_version;
-  dat.version = dwg->header.version;
+  dat.version = version;
   dat.opts = dwg->opts;
 
   size = fread (dat.chain, sizeof (char), dat.size, fp);
@@ -453,6 +456,8 @@ ENDSEC
     }
   else
     error = dwg_read_dxf (&dat, dwg);
+  if (version >= R_2007a && dwg->header.version == R_2004)
+    dwg->header.version = version;
 
   dwg->opts |= (DWG_OPTS_INDXF | loglevel);
   if (error >= DWG_ERR_CRITICAL)
