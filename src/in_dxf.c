@@ -4265,7 +4265,7 @@ add_HATCH (Dwg_Object *restrict obj, Bit_Chain *restrict dat,
             }
           assert (j >= 0);
           assert (j < (int)o->num_colors);
-          if (dat->version >= R_2007)
+          if (obj->parent->header.version >= R_2007)
             o->colors[j].color.name
                 = (BITCODE_T)bit_utf8_to_TU (pair->value.s.ptr, 0);
           else
@@ -4814,7 +4814,7 @@ add_MULTILEADER (Dwg_Object *restrict obj, Bit_Chain *restrict dat,
                 {
                   if (ctx->has_content_blk)
                     goto unknown_mleader;
-                  if (dat->version >= R_2007)
+                  if (obj->parent->header.version >= R_2007)
                     ctx->content.txt.default_text
                         = (char *)bit_utf8_to_TU (pair->value.s.ptr, 0);
                   else
