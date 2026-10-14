@@ -328,6 +328,9 @@ main (int argc, char *argv[])
   memset (&dwg, 0, sizeof (Dwg_Data));
   dat.opts = dwg.opts = opts;
   dat.version = R_2000; // initial target for the importer
+  // the target for the importer, as dxf2dwg. Unknown, the DXF is read with
+  // its strings as TV, but a lot else differently.
+  dwg.header.version = dwg_version != R_INVALID ? dwg_version : R_2000;
 
   if (infile)
     {
