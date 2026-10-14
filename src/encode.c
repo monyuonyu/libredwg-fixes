@@ -9468,6 +9468,22 @@ upconvert_TABLE (Dwg_Object *restrict obj)
                   else
                     ct->value.data_size = 0;
                 }
+              // the size of a point (from DXF 0)
+              if (ct->value.data_type == 16 && !ct->value.data_size)
+                ct->value.data_size = 16;
+              else if (ct->value.data_type == 32 && !ct->value.data_size)
+                ct->value.data_size = 24;
+              // a date without its data (from DXF) as its text
+              if (ct->value.data_type == 8 && !ct->value.data_date)
+                {
+                  free (ct->value.data_string);
+                  ct->value.data_string = NULL;
+                  if (src->text_value)
+                    ct->value.data_string
+                        = table_strdup (dwg, src->text_value);
+                  ct->value.data_type = 4;
+                  ct->value.data_size = 0;
+                }
               if ((ct->value.data_type == 4 || ct->value.data_type == 512)
                   && !ct->value.data_string)
                 ct->value.data_string = table_strdup (dwg, (BITCODE_T) "");
