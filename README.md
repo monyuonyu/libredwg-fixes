@@ -73,6 +73,12 @@ Writing R2004 to R2018 (62 commits)
 
 Each commit message says what was wrong, how it showed, and which drawing shows it.
 
+## Download
+
+Each [release](https://github.com/monyuonyu/libredwg-fixes/releases) has the fixes as patches for the
+upstream `libredwg-0.14.8601.tar.xz`: `libredwg-fixes-patches.tar.gz` (one file per fix, for `git am`)
+and `libredwg-fixes.patch` (one file, for `patch -p1`). Or clone this repository.
+
 ## Build
 
 The same as upstream LibreDWG (see `README` and `INSTALL`):
@@ -103,4 +109,5 @@ GNU GPL v3 or later, as LibreDWG. All changes are offered to the upstream projec
 - **R2004・R2010・R2013・R2018 での書き出し**（本家は R2000 まで）: 各版に書いて読み直し、読めない図面 0・消える図形 0。3D ソリッド（ACIS）も保たれる
 - AutoCAD 自身の R2000 保存との比較: example_2004〜2018 は 222 図形すべて一致、全体で 3,258 / 3,405 図形が一致
 - 日本語・中国語など 2 バイト文字の変換の誤りも直しています
+- 本家の配布物に当てるパッチは [リリース](https://github.com/monyuonyu/libredwg-fixes/releases) にあります（修正ごとのファイル一式と、1 つにまとめたもの）
 - この版は、日本語化した FreeCAD（[freecad-ja-unified](https://github.com/monyuonyu/freecad-ja-unified)）の DWG の読み書きに使っています
