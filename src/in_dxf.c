@@ -10746,7 +10746,9 @@ dxf_postprocess_SEQEND (Dwg_Object *restrict obj)
                                    ? 3
                                    : 4;
           owned = (BITCODE_H *)realloc (owned, num_owned * sizeof (BITCODE_H));
-          owned[j] = dwg_add_handleref (dwg, hdlcode, _o->handle.value, owner);
+          // absolute, as AutoCAD. ACadSharp reads a relative 6 or 10 here
+          // as another handle and loses the vertices and attributes.
+          owned[j] = dwg_add_handleref (dwg, hdlcode, _o->handle.value, NULL);
           LOG_TRACE ("%s.%s[%d] = " FORMAT_REF " [H* 0]\n", owner->name,
                      owhdls, j, ARGS_REF (owned[j]));
         }
