@@ -66,7 +66,7 @@ static int
 help (void)
 {
   printf ("\nUsage: dwgwrite [OPTION]... [-o DWGFILE] INFILE\n");
-  printf ("Writes a DWG file from various input formats. Only r2000 for now.\n"
+  printf ("Writes a DWG file from various input formats.\n"
           "\n");
 #ifdef HAVE_GETOPT_LONG
   printf ("  -v[0-9], --verbose [0-9]  verbosity\n");
