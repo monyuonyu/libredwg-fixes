@@ -3777,6 +3777,39 @@ upconvert_owned_lists (Dwg_Data *restrict dwg)
   free (count);
 }
 
+/* AutoCAD keeps the true color of an entity saved as R2000 or older in
+   its EED of the APPID ACAD: "RTTcAl", 70 flags << 8 | index, 71 the RGB,
+   then the color name. Restore it for R2004+, as AutoCAD reading it. */
+static void
+upconvert_true_colors (Dwg_Data *restrict dwg)
+{
+  for (BITCODE_BL i = 0; i < dwg->num_objects; i++)
+    {
+      Dwg_Object *obj = &dwg->object[i];
+      Dwg_Object_Entity *ent;
+      if (obj->supertype != DWG_SUPERTYPE_ENTITY || !obj->tio.entity)
+        continue;
+      ent = obj->tio.entity;
+      for (BITCODE_BL j = 0; j + 2 < ent->num_eed; j++)
+        {
+          const Dwg_Eed_Data *d = ent->eed[j].data;
+          const Dwg_Eed_Data *d1 = ent->eed[j + 1].data;
+          const Dwg_Eed_Data *d2 = ent->eed[j + 2].data;
+          if (!d || !d1 || !d2 || d->code != 0 || d->u.eed_0.is_tu
+              || d->u.eed_0.length != 6
+              || memcmp (d->u.eed_0.string, "RTTcAl", 6) || d1->code != 70
+              || d2->code != 71 || (d2->u.eed_71.rl >> 24) != 0xc2)
+            continue;
+          ent->color.rgb = d2->u.eed_71.rl;
+          ent->color.method = 0xc2;
+          ent->color.flag |= 0x80;
+          LOG_TRACE ("%s " FORMAT_HV ": true color 0x%x from the EED\n",
+                     obj->name, obj->handle.value, (unsigned)ent->color.rgb);
+          break;
+        }
+    }
+}
+
 /* The AcDb:AcDsPrototype_1b DataStorage section of R2013+, with the SAB of
    the ACIS entities (REGION, 3DSOLID, BODY, SURFACEs), as in AutoCAD's
    example_2018: the segments segidx, datidx, _data_, schidx, schdat and
@@ -5101,6 +5134,8 @@ dwg_encode (Dwg_Data *restrict dwg, Bit_Chain *restrict dat)
     unsigned total_size = 0;
     old_dat = dat;
 
+    if (dwg->header.from_version < R_2004a)
+      upconvert_true_colors (dwg);
     // Since R2013 the SAB of the ACIS entities is in the AcDs
     if (dat->version >= R_2013b && !acds_as_read (dwg, dat))
       acds_mark_entities (dwg);
