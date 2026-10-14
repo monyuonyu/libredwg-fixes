@@ -30,6 +30,8 @@
 
 ## 修复内容（116 个提交）
 
+每个修复的详细说明：[docs/FIXES.zh-CN.md](docs/FIXES.zh-CN.md)
+
 读取
 - R2004 及以后的类段：`dwg_version`、`maint_version` 是 BL（规范写的是 BS）；R2018 的 AuxHeader：维护版本号是 RL。
 - 图元颜色：RGB 在透明度之前；R2007 及以后的配色簿句柄被读了两次（导致丢失图层）。

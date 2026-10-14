@@ -34,6 +34,8 @@ They are used for DWG import and export by [freecad-ja-unified](https://github.c
 
 ## What was fixed (116 commits)
 
+Every fix explained in detail: [docs/FIXES.md](docs/FIXES.md).
+
 Reading
 - R2004+ class section: `dwg_version`, `maint_version` are BL (the spec says BS); R2018 AuxHeader:
   the maintenance versions are RL.
