@@ -32,7 +32,7 @@ They are used for DWG import and export by [freecad-ja-unified](https://github.c
   token-identical after writing, also from pre-R2013 drawings and DXF into the R2013+ AcDs section.
 - `make check` passes.
 
-## What was fixed (116 commits)
+## What was fixed (122 commits)
 
 Every fix explained in detail: [docs/FIXES.md](docs/FIXES.md).
 
@@ -73,6 +73,14 @@ Writing R2004 to R2018 (62 commits)
 - Fixes found on the way that also affect R2000: `bit_write_UMC` shortest form, `bit_write_DD`
   rounding, object map chunks, FileDepList strings, SPATIAL_INDEX writing 51 MB of zeros,
   `dwgwrite`/`dxf2dwg` reading the DXF before the target version was set.
+
+Found on real AutoCAD 2018 drawings of a user (6 commits, not yet offered upstream)
+- Reading: R2004+ sections whose zero pages AutoCAD leaves out (the ACIS data of large solids).
+- Writing R13–R2010: the SAT of large solids (64 KB or more) in blocks of 4096 bytes, as AutoCAD.
+- DXF: the header strings in the drawing codepage from $DWGCODEPAGE on; SummaryInfo strings and
+  layout and dictionary names no longer converted from UTF-8 twice (Japanese text garbled).
+- Writing R2000 from R2007+: the header strings (HYPERLINKBASE, STYLESHEET, FINGERPRINTGUID, ...)
+  whole, not only their first character.
 
 Each commit message says what was wrong, how it showed, and which drawing shows it.
 

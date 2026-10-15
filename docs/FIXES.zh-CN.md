@@ -4,7 +4,7 @@
 
 # 每一项修复的说明
 
-本页逐一说明 `fixes` 分支上的 116 个修复提交，它们建立在上游标签 `0.14.8601` 之上。
+本页逐一说明 `fixes` 分支上的 122 个修复提交，它们建立在上游标签 `0.14.8601` 之上。
 对每项修复，说明哪里出错、用户看到的现象、哪张图纸可以看出问题、做了什么修改，并附上提交链接。
 简短的概要见 [README](../README.zh-CN.md)。
 
@@ -20,6 +20,8 @@
   把其中一个转换为另一个版本，再与 AutoCAD 自己保存的该版本比较，就能看出 AutoCAD 在转换时做了什么。
 - **往返测试。** 每张图纸都以 R2000、R2004、R2010、R2013 和 R2018 写出，包括直接写出
   （`dwgrewrite`）和经由 DXF（先 `dwg2dxf` 再 `dxf2dwg`），再用 ACadSharp 读回。途中丢失或改变的任何内容都是错误。
+- **真实图纸。** 有 6 项修复（[3.4](#34-r2007-及以后的-dxf-转-r2000头部字符串也使用图纸代码页) – [3.6](#36-dxf-导入名称被再次从-utf-8-转换)、[7.8](#78-读取省略了全零页的-acds-段)、[7.9](#79-写出-r13r2010sat-按-4096-字节分块)、
+  [12.7](#127-来自-r2007-及以后的头部字符串完整字符串而不是第一个字符)）是在一位用户的真实 AutoCAD 2018 图纸（未公开）上发现的。每一项都先用测试集中的图纸复现。
 
 图纸名称沿用测试集中的名称。`sample_AC10xx` 和 `sample_base` 是 ACadSharp 的样例；`example_*`、`gh109_1`、
 `gh44-error`、`gh209_1`、`2000/TS1`、`2004/Line` 和 `2018/Dynblocks` 位于 LibreDWG 的 `test/test-data`。
@@ -46,6 +48,9 @@ TV/TU 为 8 位和 UTF-16 文本，H 为句柄。
 
 用于写出 R2004 至 R2018 的 62 个提交（从 [`1eb484a6`](https://github.com/monyuonyu/libredwg-fixes/commit/1eb484a6b53445a2f9be6d2a8e09d512b674d485) 开始）尚未提交给上游：
 上游 LibreDWG 只能写出 R2000 及更早版本。
+
+在真实图纸上发现的 6 项修复（[3.4](#34-r2007-及以后的-dxf-转-r2000头部字符串也使用图纸代码页) – [3.6](#36-dxf-导入名称被再次从-utf-8-转换)、[7.8](#78-读取省略了全零页的-acds-段)、[7.9](#79-写出-r13r2010sat-按-4096-字节分块)、
+[12.7](#127-来自-r2007-及以后的头部字符串完整字符串而不是第一个字符)）同样尚未提交给上游。
 
 ## 目录
 
@@ -222,6 +227,44 @@ DXF 中的 TABLESTYLE 颜色见 [6.3](#63-tablestyler2010-及以后的所有单�
 - **修改：** `dxf_read_file` 按 R2004 读取 DXF（这样字符串保持 UTF-8），然后再设回 R2007 及以后的版本；
   HATCH 和 MULTILEADER 依据 DWG 的版本进行判断。
 - **提交：** [`f8cb428f`](https://github.com/monyuonyu/libredwg-fixes/commit/f8cb428f7ae7850f9bd9d3810264aea75fb00445)、[`061d4164`](https://github.com/monyuonyu/libredwg-fixes/commit/061d41647cdfdbaf000d2dd4d04c3a9aa6f79002) — 尚未提交给上游。
+
+### 3.4 R2007 及以后的 DXF 转 R2000：头部字符串也使用图纸代码页
+
+- **原因：** `dxf_read_pair` 会把 R2007 及以后 DXF 中的 UTF-8 字符串转换为 R2007 之前目标版本的代码页
+  （[3.2](#32-r2007-及以后的-dxf-转-r2000把-utf-8-文本转换为图纸代码页)），但代码页直到 HEADER 段之后才在 `dxf_fixup_header` 中设置，因此头部字符串是按代码页 0 转换的。
+- **表现：** 把 ANSI_932 图纸的 R2018 DXF 写成 R2000 时，$HYPERLINKBASE 的 `C:\図面\リンク\` 变成了 `C:\`，
+  $STYLESHEET 的 `モノクロ.stb` 变成了 `簧ｯ`，$DIMPOST 的 `<>ミリ` 变成了 `<>ﾟ`。
+- **图纸：** 在一位用户的真实 AutoCAD 2018 图纸（未公开）上发现；用代码页为 ANSI_932、带日文头部字符串的
+  `sample_AC1032` 的 DXF 复现。
+- **修改：** `dxf_header_read` 在读到 $DWGCODEPAGE 时立即设置代码页。
+- **提交：** [`14bc8cee`](https://github.com/monyuonyu/libredwg-fixes/commit/14bc8cee98da847cbaed9dbbeeecac45c020c96e) — 尚未提交给上游。
+
+### 3.5 DXF 导入：SummaryInfo 字符串被转换了两次
+
+- **原因：** 头部字符串 $TITLE、$SUBJECT、$AUTHOR、$KEYWORDS、$COMMENTS、$LASTSAVEDBY、
+  $CUSTOMPROPERTYTAG 和 $CUSTOMPROPERTY 在 `dxf_read_pair` 转换之后又一次从 UTF-8 转换为代码页；
+  对于 `bit_write_T16` 按 UTF-8 接收它们的 R2007 及以后版本也是如此。此外它们在 1023 字节处被截断。
+- **表现：** R2018 DXF 中的日文标题、作者和路径在写成 R2004 和 R2018 时出现乱码
+  （CP932 下出现 "utf-8: BAD_CONTINUATION_BYTE"）。
+- **图纸：** 在一位用户的真实 AutoCAD 2018 图纸（未公开）上发现；用代码页为 ANSI_932、带日文标题、作者和
+  自定义属性的 `sample_AC1032` 的 DXF 复现。
+- **修改：** `SUMMARY_T` 与其他头部字符串一样，按原样接收字符串。
+- **提交：** [`ea21a72f`](https://github.com/monyuonyu/libredwg-fixes/commit/ea21a72f6cb4273feef6fd2ae1d649e80125982c) — 尚未提交给上游。
+
+### 3.6 DXF 导入：名称被再次从 UTF-8 转换
+
+- **原因：** `dwg_add_u8_input` 把 UTF-8 转换为代码页，但 DXF 中的字符串已经是编码器所要的形式：
+  R2007 及以后 DXF 的 UTF-8 已由 `dxf_read_pair` 转换为 R2007 之前目标版本的代码页，较旧的 DXF 本来就是其代码页，
+  而 R2007 及以后的编码器接收的是 UTF-8。`in_dxf` 却仍在字典项、新对象、图层项、线型虚线、表格样式、DIMASSOC、
+  EVALVARIANT、值参数和 ACAD_TABLE 中使用它。
+- **表现：** ANSI_932 的 R2018 DXF 中的布局 `配置図１` 在写成 R2000 和 R2004 时，在布局字典中变成了 `zu}P`，
+  写成 R2018 时出现乱码。
+- **图纸：** 在一位用户的真实 AutoCAD 2018 图纸（未公开）上发现；用代码页为 ANSI_932、带日文布局名的
+  `sample_AC1032` 的 DXF 复现。
+- **修改：** 新的 `dxf_add_u8` 按原样接收字符串；`add_LTYPE_dashes`、`add_TABLESTYLE`、`add_DIMASSOC`、
+  `add_LAYER_entry`、`add_EVALVARIANT`、`add_VALUEPARAMs`、`add_ACAD_TABLE`、`add_dictionary_itemhandles`
+  和 `new_object` 改用它。
+- **提交：** [`53ca04f7`](https://github.com/monyuonyu/libredwg-fixes/commit/53ca04f7b477e9e29aaff9294a5e590b971e80a9) — 尚未提交给上游。
 
 写入 R2000 的 UTF-16 EED 字符串见 [4.3](#43-写入-r2000-的-r2007-及以后的-eed-字符串)；R2004 及以后文件的字符串编码见 [13.10](#1310-r2004-及以后文件中的字符串t16tu-和字符串流)。
 
@@ -535,6 +578,29 @@ DXF 中的 TABLESTYLE 颜色见 [6.3](#63-tablestyler2010-及以后的所有单�
 - **修改：** 使用真实的字段名。
 - **提交：** [`da463d6d`](https://github.com/monyuonyu/libredwg-fixes/commit/da463d6d34deddbfcb3c107a1582bed3d65a4384)（部分） — PR [#1445](https://github.com/LibreDWG/libredwg/pull/1445)。
 
+### 7.8 读取：省略了全零页的 AcDs 段
+
+- **原因：** AutoCAD 不写出只含零的页（ODA 4.4：起始偏移超过前面各页大小之和的页之前有零页，
+  末尾也会补零页直到段的大小）。`read_2004_compressed_section` 拒绝了大于页数乘以页大小的段。
+- **表现：** 一张 R2018 图纸的 AcDb:AcDsPrototype_1b 段（10 个 0x7400 的页，共 488,320 字节）被拒绝
+  （"Invalid section AcDb:AcDsPrototype_1b size 488320 > 10 * 29696"），其中的 3DSOLID 丢失了 ACIS 数据。
+- **图纸：** 在一位用户的真实 AutoCAD 2018 图纸（未公开）上发现；通过一个仅用于测试的写出修改
+  （像 AutoCAD 一样省略 AcDs 段的零页）复现。
+- **修改：** 按整页分配段的逻辑大小，上限仍为 790 MB。各页本来就被复制到已清零缓冲区的起始偏移处，
+  因此被省略的页读出来就是零。
+- **提交：** [`b65b76a0`](https://github.com/monyuonyu/libredwg-fixes/commit/b65b76a048deb3dcbe1c3f1d30b2814bd6e8ca96) — 尚未提交给上游。
+
+### 7.9 写出 R13–R2010：SAT 按 4096 字节分块
+
+- **原因：** DXF 导入把 ACIS 图元的整个 SAT 放在一个块中。`FIELD_TF` 对 64 KB（`MAX_SIZE_TF`）及以上的数据
+  什么也不写，所以大实体只写了块大小而没有数据。
+- **表现：** 实体丢失了 ACIS 数据，图元的其余部分成了乱码：一张 R2018 图纸中含 995 行 SAT（65 KB）的
+  3DSOLID 经由 DXF 写成 R2000 时丢失了它。直接写出则不受影响。
+- **图纸：** 在一位用户的真实 AutoCAD 2018 图纸（未公开）上发现；把测试集中一个 3DSOLID 的 SAT 通过重复其记录
+  扩大到 64 KB 以上，再经由 DXF 写成 R2000 复现。
+- **修改：** 与 AutoCAD 一样，`encode_3dsolid` 在没有分块或块过大时，把 SAT 分成最多 4096 字节的块。
+- **提交：** [`be9a6ba7`](https://github.com/monyuonyu/libredwg-fixes/commit/be9a6ba7e03bab81f919c02397e38bf69e99122e) — 尚未提交给上游。
+
 ## 8. 代理对象和未知对象
 
 ### 8.1 未知对象保留其类名
@@ -721,7 +787,7 @@ DXF 中的 TABLESTYLE 颜色见 [6.3](#63-tablestyler2010-及以后的所有单�
 DXF 导入方面的其他修复：EED 1003/1004（[4.1](#41-eed-图层1003大端序的句柄dxf-中是名称)、
 [4.2](#42-dxf-的-eed-二进制数据1004被解码了两次)），UTF-8 文本
 （[3.2](#32-r2007-及以后的-dxf-转-r2000把-utf-8-文本转换为图纸代码页)、
-[3.3](#33-dxf-转-r2007-及以后名称只剩第一个字符)），嵌入的 MTEXT
+[3.3](#33-dxf-转-r2007-及以后名称只剩第一个字符)、[3.4](#34-r2007-及以后的-dxf-转-r2000头部字符串也使用图纸代码页) – [3.6](#36-dxf-导入名称被再次从-utf-8-转换)），嵌入的 MTEXT
 （[5.5](#55-dxf-导入attribattdef-中嵌入的-mtextmtext-的分栏部分)），属性标记
 （[5.9](#59-属性标记除空格和--以外的任意字符)），表格（[6.6](#66-acad_table-的-dxf-导入与导出)），
 SAT（[7.6](#76-dxfsat-的行和转义的-)），代理对象（[8.4](#84-dxf未知对象和代理对象)），
@@ -825,6 +891,19 @@ R14 无法保存的线宽，以及未做的三种转换（堆叠分数代码、�
 - **图纸：** `sample_AC1015`、`example_2000`（AutoCAD 保存的 R2000）。
 - **修改：** 与 AutoCAD 一样，把渐变 HATCH 变为使用其第一个渐变颜色的实体填充。
 - **提交：** [`358cb644`](https://github.com/monyuonyu/libredwg-fixes/commit/358cb64439f23dd79739ff337942ebc938cfcd40)（部分） — PR [#1444](https://github.com/LibreDWG/libredwg/pull/1444)。
+
+### 12.7 来自 R2007 及以后的头部字符串：完整字符串而不是第一个字符
+
+- **原因：** R13–R2004 的头部字符串（MENU、DIMPOST、DIMAPOST、DIMBLK_T、DIMBLK1_T、DIMBLK2_T、
+  HYPERLINKBASE、STYLESHEET、FINGERPRINTGUID、VERSIONGUID、PROJECTNAME）用 `FIELD_TV` 写出，它按原样写字符串：
+  来自字符串为 UTF-16 的 R2007 及以后图纸时，只剩第一个字符。
+- **表现：** R2018 图纸写成 R2000 后，$FINGERPRINTGUID 变成 `{`，$HYPERLINKBASE 的 `C:\図面\リンク\`
+  变成 `C`，$STYLESHEET 是空的而不是 `モノクロ.stb`。
+- **图纸：** 在一位用户的真实 AutoCAD 2018 图纸（未公开）上发现；把加入日文头部字符串的 `sample_AC1032`
+  直接写成 R2000 复现。
+- **修改：** 新的 `FIELD_TH` 在 R2007 之前把它们按 T 写出并进行转换（这些版本的解码方式相同）；来自更早版本时
+  仍和以前一样为空（R2004 的 SummaryInfo 会复制 HYPERLINKBASE）。
+- **提交：** [`20e7ce23`](https://github.com/monyuonyu/libredwg-fixes/commit/20e7ce236ba3d993a57318981564f4d321ce534f) — 尚未提交给上游。
 
 R2000 输出方面的其他修复：颜色（[2.3](#23-写入-r2000-的颜色byblockautocad-的-aci-后备值aci-调色板)），
 EED 字符串（[4.3](#43-写入-r2000-的-r2007-及以后的-eed-字符串)），R2018 多行属性

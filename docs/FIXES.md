@@ -2,7 +2,7 @@
 
 # Every fix, explained
 
-This page explains the 116 fix commits of the branch `fixes`, which sit on top of the upstream tag
+This page explains the 122 fix commits of the branch `fixes`, which sit on top of the upstream tag
 `0.14.8601`. For each fix it says what was wrong, how it showed to a user, which drawing shows it,
 and what was changed, with a link to the commit. The [README](../README.md) has the short summary.
 
@@ -21,6 +21,9 @@ and what was changed, with a link to the commit. The [README](../README.md) has 
 - **Round trips.** Every drawing was written as R2000, R2004, R2010, R2013 and R2018, directly
   (`dwgrewrite`) and via DXF (`dwg2dxf`, then `dxf2dwg`), and read back with ACadSharp. Anything lost
   or changed on the way is a bug.
+- **Real drawings.** Six fixes ([3.4](#34-r2007-dxf-to-r2000-the-header-strings-in-the-drawing-codepage) – [3.6](#36-dxf-import-names-converted-from-utf-8-a-second-time), [7.8](#78-reading-acds-sections-with-omitted-zero-pages), [7.9](#79-writing-r13r2010-the-sat-in-blocks-of-4096-bytes),
+  [12.7](#127-header-strings-from-r2007-the-whole-string-not-the-first-character)) were found on real AutoCAD 2018 drawings of a user, which are not public. Each
+  was then reproduced with a drawing of the corpus.
 
 Drawing names are those of the test corpus. `sample_AC10xx` and `sample_base` are ACadSharp's
 samples; `example_*`, `gh109_1`, `gh44-error`, `gh209_1`, `2000/TS1`, `2004/Line` and
@@ -49,6 +52,9 @@ parts of several PRs.
 
 The 62 commits for writing R2004 to R2018 (from [`1eb484a6`](https://github.com/monyuonyu/libredwg-fixes/commit/1eb484a6b53445a2f9be6d2a8e09d512b674d485) on) are not yet offered upstream:
 upstream LibreDWG writes R2000 and older only.
+
+The six fixes found on real drawings ([3.4](#34-r2007-dxf-to-r2000-the-header-strings-in-the-drawing-codepage) – [3.6](#36-dxf-import-names-converted-from-utf-8-a-second-time), [7.8](#78-reading-acds-sections-with-omitted-zero-pages), [7.9](#79-writing-r13r2010-the-sat-in-blocks-of-4096-bytes),
+[12.7](#127-header-strings-from-r2007-the-whole-string-not-the-first-character)) are not yet offered upstream either.
 
 ## Contents
 
@@ -255,6 +261,47 @@ TABLESTYLE colors in DXF are in [6.3](#63-tablestyle-all-r2010-cell-styles-r2007
 - **What was changed:** `dxf_read_file` reads the DXF as for R2004 (so the strings stay UTF-8) and
   then sets the R2007+ version again; HATCH and MULTILEADER decide by the version of the DWG.
 - **Commits:** [`f8cb428f`](https://github.com/monyuonyu/libredwg-fixes/commit/f8cb428f7ae7850f9bd9d3810264aea75fb00445), [`061d4164`](https://github.com/monyuonyu/libredwg-fixes/commit/061d41647cdfdbaf000d2dd4d04c3a9aa6f79002) — not yet offered upstream.
+
+### 3.4 R2007+ DXF to R2000: the header strings in the drawing codepage
+
+- **What was wrong:** `dxf_read_pair` converts the UTF-8 strings of an R2007+ DXF to the codepage of
+  a target before R2007 ([3.2](#32-r2007-dxf-to-r2000-convert-the-utf-8-text-to-the-drawing-codepage)), but the codepage was set only after the HEADER section,
+  in `dxf_fixup_header`. The header strings were converted with codepage 0.
+- **How it showed:** an R2018 DXF of an ANSI_932 drawing written as R2000 had $HYPERLINKBASE
+  `C:\図面\リンク\` as `C:\`, $STYLESHEET `モノクロ.stb` as `簧ｯ` and $DIMPOST `<>ミリ` as `<>ﾟ`.
+- **Drawing:** found on real AutoCAD 2018 drawings of a user (not public); reproduced with
+  `sample_AC1032` as DXF with codepage ANSI_932 and Japanese header strings.
+- **What was changed:** `dxf_header_read` sets the codepage as soon as it reads $DWGCODEPAGE.
+- **Commit:** [`14bc8cee`](https://github.com/monyuonyu/libredwg-fixes/commit/14bc8cee98da847cbaed9dbbeeecac45c020c96e) — not yet offered upstream.
+
+### 3.5 DXF import: the SummaryInfo strings converted twice
+
+- **What was wrong:** the header strings $TITLE, $SUBJECT, $AUTHOR, $KEYWORDS, $COMMENTS,
+  $LASTSAVEDBY, $CUSTOMPROPERTYTAG and $CUSTOMPROPERTY were converted from UTF-8 to the codepage
+  again after `dxf_read_pair` had done it, and also for R2007+, where `bit_write_T16` takes them as
+  UTF-8. They were also cut at 1023 bytes.
+- **How it showed:** Japanese titles, authors and paths of an R2018 DXF were garbled when written
+  as R2004 and R2018 ("utf-8: BAD_CONTINUATION_BYTE" with CP932).
+- **Drawing:** found on real AutoCAD 2018 drawings of a user (not public); reproduced with
+  `sample_AC1032` as DXF with codepage ANSI_932 and a Japanese title, author and custom properties.
+- **What was changed:** `SUMMARY_T` takes the string as it is, like the other header strings.
+- **Commit:** [`ea21a72f`](https://github.com/monyuonyu/libredwg-fixes/commit/ea21a72f6cb4273feef6fd2ae1d649e80125982c) — not yet offered upstream.
+
+### 3.6 DXF import: names converted from UTF-8 a second time
+
+- **What was wrong:** `dwg_add_u8_input` converts UTF-8 to the codepage, but the strings of the
+  DXF are already as the encoder takes them: `dxf_read_pair` converted the UTF-8 of an R2007+ DXF to
+  the codepage of a target before R2007, an older DXF is in its codepage, and for R2007+ the encoder
+  takes UTF-8. `in_dxf` still used it for dictionary entries, new objects, layer entries,
+  linetype dashes, table styles, DIMASSOC, EVALVARIANT, value parameters and ACAD_TABLE.
+- **How it showed:** the layout `配置図１` of an ANSI_932 R2018 DXF was `zu}P` in the layout
+  dictionary as R2000 and R2004, and garbled as R2018.
+- **Drawing:** found on real AutoCAD 2018 drawings of a user (not public); reproduced with
+  `sample_AC1032` as DXF with codepage ANSI_932 and a Japanese layout name.
+- **What was changed:** the new `dxf_add_u8` takes the string as it is; `add_LTYPE_dashes`,
+  `add_TABLESTYLE`, `add_DIMASSOC`, `add_LAYER_entry`, `add_EVALVARIANT`, `add_VALUEPARAMs`,
+  `add_ACAD_TABLE`, `add_dictionary_itemhandles` and `new_object` use it.
+- **Commit:** [`53ca04f7`](https://github.com/monyuonyu/libredwg-fixes/commit/53ca04f7b477e9e29aaff9294a5e590b971e80a9) — not yet offered upstream.
 
 UTF-16 EED strings written to R2000 are in [4.3](#43-r2007-eed-strings-written-to-r2000); the
 string encodings of R2004+ files are in [13.10](#1310-strings-of-r2004-files-t16-tu-and-the-string-stream).
@@ -629,6 +676,36 @@ string encodings of R2004+ files are in [13.10](#1310-strings-of-r2004-files-t16
 - **What was changed:** the real field names.
 - **Commit:** [`da463d6d`](https://github.com/monyuonyu/libredwg-fixes/commit/da463d6d34deddbfcb3c107a1582bed3d65a4384) (part) — PR [#1445](https://github.com/LibreDWG/libredwg/pull/1445).
 
+### 7.8 Reading: AcDs sections with omitted zero pages
+
+- **What was wrong:** AutoCAD does not write the pages of a section that hold only zeros (ODA 4.4:
+  a page whose start offset is beyond the sum of the previous pages is preceded by zero pages, and
+  zero pages are added at the end up to the section size). `read_2004_compressed_section` rejected a
+  section larger than its number of pages times the page size.
+- **How it showed:** the AcDb:AcDsPrototype_1b section of an R2018 drawing, 488,320 bytes in 10
+  pages of 0x7400, was rejected ("Invalid section AcDb:AcDsPrototype_1b size 488320 > 10 * 29696"),
+  and its 3DSOLIDs lost their ACIS data.
+- **Drawing:** found on real AutoCAD 2018 drawings of a user (not public); reproduced with a
+  test-only change of the writer that leaves out zero pages of the AcDs section, as AutoCAD does.
+- **What was changed:** allocate the logical size of the section in whole pages, still bounded by
+  790 MB. The pages are already copied to their start offsets in the zeroed buffer, so the omitted
+  pages read as zeros.
+- **Commit:** [`b65b76a0`](https://github.com/monyuonyu/libredwg-fixes/commit/b65b76a048deb3dcbe1c3f1d30b2814bd6e8ca96) — not yet offered upstream.
+
+### 7.9 Writing R13–R2010: the SAT in blocks of 4096 bytes
+
+- **What was wrong:** the DXF importer gives the whole SAT of an ACIS entity in one block.
+  `FIELD_TF` writes nothing of 64 KB (`MAX_SIZE_TF`) or more, so the block size of a large solid was
+  written without its data.
+- **How it showed:** the solid lost its ACIS data and the rest of the entity was garbage: an R2018
+  drawing with a 3DSOLID of 995 SAT lines (65 KB) lost it via DXF to R2000. Written directly, it
+  was not affected.
+- **Drawing:** found on real AutoCAD 2018 drawings of a user (not public); reproduced with a corpus
+  3DSOLID whose SAT was made larger than 64 KB by repeating its records, via DXF to R2000.
+- **What was changed:** as AutoCAD, `encode_3dsolid` splits the SAT into blocks of at most 4096
+  bytes when there is no block or a larger one.
+- **Commit:** [`be9a6ba7`](https://github.com/monyuonyu/libredwg-fixes/commit/be9a6ba7e03bab81f919c02397e38bf69e99122e) — not yet offered upstream.
+
 ## 8. Proxies and unknown objects
 
 ### 8.1 Unknown objects keep their class name
@@ -848,7 +925,7 @@ The bound on the number of classes, found on an AEC drawing, is in [1.2](#12-the
 Also DXF import: EED 1003/1004 ([4.1](#41-eed-layer-1003-a-big-endian-handle-a-name-in-dxf),
 [4.2](#42-dxf-eed-binary-1004-decoded-twice)), UTF-8 text
 ([3.2](#32-r2007-dxf-to-r2000-convert-the-utf-8-text-to-the-drawing-codepage),
-[3.3](#33-dxf-to-r2007-names-cut-to-their-first-character)), embedded MTEXT
+[3.3](#33-dxf-to-r2007-names-cut-to-their-first-character), [3.4](#34-r2007-dxf-to-r2000-the-header-strings-in-the-drawing-codepage) – [3.6](#36-dxf-import-names-converted-from-utf-8-a-second-time)), embedded MTEXT
 ([5.5](#55-dxf-import-the-embedded-mtext-of-attribattdef-the-mtext-columns-part)), attribute tags
 ([5.9](#59-attribute-tags-any-character-but-space-and-)), tables ([6.6](#66-dxf-import-and-export-of-acad_table)),
 SAT ([7.6](#76-dxf-sat-lines-and-the-escaped-)), proxies ([8.4](#84-dxf-unknown-objects-and-proxies)),
@@ -963,6 +1040,21 @@ fit-point splines to control points).
 - **What was changed:** a gradient HATCH becomes a solid fill in its first gradient color, as
   AutoCAD does.
 - **Commit:** [`358cb644`](https://github.com/monyuonyu/libredwg-fixes/commit/358cb64439f23dd79739ff337942ebc938cfcd40) (part) — PR [#1444](https://github.com/LibreDWG/libredwg/pull/1444).
+
+### 12.7 Header strings from R2007+: the whole string, not the first character
+
+- **What was wrong:** the header strings of R13–R2004 (MENU, DIMPOST, DIMAPOST, DIMBLK_T,
+  DIMBLK1_T, DIMBLK2_T, HYPERLINKBASE, STYLESHEET, FINGERPRINTGUID, VERSIONGUID, PROJECTNAME) were
+  written with `FIELD_TV`, which writes the string as it is: from an R2007+ drawing, with UTF-16
+  strings, only their first character.
+- **How it showed:** an R2018 drawing written as R2000 had $FINGERPRINTGUID `{`, $HYPERLINKBASE
+  `C:\図面\リンク\` as `C` and an empty $STYLESHEET instead of `モノクロ.stb`.
+- **Drawing:** found on real AutoCAD 2018 drawings of a user (not public); reproduced with
+  `sample_AC1032` written directly as R2000, with Japanese header strings added.
+- **What was changed:** the new `FIELD_TH` writes them as T before R2007, which converts them
+  (decoding is the same for these versions); from earlier versions they stay empty as before (the
+  R2004 SummaryInfo copies HYPERLINKBASE).
+- **Commit:** [`20e7ce23`](https://github.com/monyuonyu/libredwg-fixes/commit/20e7ce236ba3d993a57318981564f4d321ce534f) — not yet offered upstream.
 
 Also for R2000 output: colors ([2.3](#23-colors-written-to-r2000-byblock-autocads-aci-fallback-the-aci-palette)),
 EED strings ([4.3](#43-r2007-eed-strings-written-to-r2000)), R2018 multi-line attributes

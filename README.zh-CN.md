@@ -28,7 +28,7 @@
   从 R2013 之前的图纸或 DXF 写入 R2013 及以后版本的 AcDs 段时也是如此。
 - `make check` 通过。
 
-## 修复内容（116 个提交）
+## 修复内容（122 个提交）
 
 每个修复的详细说明：[docs/FIXES.zh-CN.md](docs/FIXES.zh-CN.md)
 
@@ -63,6 +63,12 @@ DXF
   3DSOLID 的历史句柄、AutoCAD 保存在 EED 中的真彩色。
 - 过程中发现、同样影响 R2000 的修复：`bit_write_UMC` 的最短形式、`bit_write_DD` 的舍入、对象映射的分块、FileDepList 字符串、
   SPATIAL_INDEX 写出 51 MB 零字节的问题、`dwgwrite`/`dxf2dwg` 在设定目标版本之前就读取 DXF 的问题。
+
+在一位用户的真实 AutoCAD 2018 图纸上发现的问题（6 个提交，尚未提交给上游）
+- 读取：AutoCAD 省略了零页的 R2004 及以后的段（大实体的 ACIS 数据）。
+- 写出 R13–R2010：大实体（64 KB 及以上）的 SAT 与 AutoCAD 一样按 4096 字节分块。
+- DXF：从 $DWGCODEPAGE 起头部字符串使用图纸代码页；SummaryInfo 字符串以及布局名和字典名不再从 UTF-8 转换两次（日文乱码）。
+- 从 R2007 及以后写出 R2000：头部字符串（HYPERLINKBASE、STYLESHEET、FINGERPRINTGUID 等）完整写出，而不是只剩第一个字符。
 
 每个提交说明都写明了哪里出错、表现为什么现象、以及用哪张图纸可以看出来。
 
