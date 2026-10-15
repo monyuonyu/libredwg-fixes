@@ -2062,26 +2062,42 @@ read_2004_compressed_section (Bit_Chain *dat, Dwg_Data *restrict dwg,
   // overflows the uint32_t max_decomp_size and wraps to a small value, letting
   // the guard below pass while info->size (checked as int64 at :2059) stays
   // large -> under-allocation and a later OOB sentinel scan. GH security.
+  if (info->size < 0)
+    {
+      LOG_ERROR ("Invalid section %s size %" PRId64, info->name, info->size);
+      return DWG_ERR_VALUEOUTOFBOUNDS;
+    }
   {
     uint64_t max_decomp_size64
         = (uint64_t)info->num_sections * (uint64_t)info->max_decomp_size;
+    /* Pages with only zeroes are not written to the file, so the page count
+       may be smaller than the section size needs (ODA spec 4.4: zero pages
+       are inserted before a page with a higher start offset, and at the end
+       until the section size is reached). AutoCAD does that e.g. with a
+       large AcDsPrototype_1b. Allocate the whole logical section then,
+       in full pages. */
+    if (info->max_decomp_size
+        && (uint64_t)info->size > max_decomp_size64)
+      {
+        uint64_t npages = ((uint64_t)info->size + info->max_decomp_size - 1)
+                          / info->max_decomp_size;
+        LOG_TRACE ("Section %s size %" PRId64 " > %u * " FORMAT_RL
+                   ": with omitted zero pages\n",
+                   info->name, info->size, info->num_sections,
+                   info->max_decomp_size);
+        max_decomp_size64 = npages * (uint64_t)info->max_decomp_size;
+      }
     if (max_decomp_size64 == 0 || max_decomp_size64 > 0x2f000000) // 790Mb
       {
         LOG_ERROR ("Invalid section %s count or max decompression size. "
-                   "Sections: " FORMAT_RL ", Max size: " FORMAT_RL,
-                   info->name, info->num_sections, info->max_decomp_size);
+                   "Sections: " FORMAT_RL ", Max size: " FORMAT_RL
+                   ", Size: %" PRId64,
+                   info->name, info->num_sections, info->max_decomp_size,
+                   info->size);
         return DWG_ERR_VALUEOUTOFBOUNDS;
       }
     max_decomp_size = (uint32_t)max_decomp_size64;
   }
-  if (info->size > (int64_t)info->num_sections * (int64_t)info->max_decomp_size
-      || info->size < 0)
-    {
-      LOG_ERROR ("Invalid section %s size %" PRId64 " > %u * " FORMAT_RL,
-                 info->name, info->size, info->num_sections,
-                 info->max_decomp_size);
-      return DWG_ERR_VALUEOUTOFBOUNDS;
-    }
   LOG_HANDLE ("Alloc section %s size %" PRIu32 "\n", info->name,
               max_decomp_size);
   dec.opts = dwg->opts & DWG_OPTS_LOGLEVEL;
