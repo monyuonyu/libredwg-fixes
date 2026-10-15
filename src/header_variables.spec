@@ -19,6 +19,18 @@
  * modified by Michal Josef Špaček
  */
 
+// A string of R13-R2004, as T: converted from the UTF-16 of R2007+.
+// From earlier versions empty, not NULL, as FIELD_TV
+#define FIELD_TH(nam, dxf)                                                    \
+  {                                                                           \
+    IF_ENCODE_FROM_EARLIER                                                    \
+    {                                                                         \
+      if (!_obj->nam)                                                         \
+        _obj->nam = strdup ("");                                              \
+    }                                                                         \
+    FIELD_T (nam, dxf);                                                       \
+  }
+
 //TODO: (here unknwon_* or in dwg.spec)
 //  GEOLATLONGFORMAT [B] default 0
 //  GEOMARKERVISIBILITY [B] default 1
@@ -264,7 +276,7 @@
   FIELD_BD (CMLSCALE, 40);
   FIELD_BD (CELTSCALE, 40);
   PRE (R_2007a) {
-    FIELD_TV (MENU, 1);
+    FIELD_TH (MENU, 1);
   }
   FIELD_TIMEBLL (TDUCREATE, 40);
   FIELD_TIMEBLL (TDUUPDATE, 40);
@@ -364,8 +376,8 @@
       FIELD_3BD (UCSORGFRONT, 10);
       FIELD_3BD (UCSORGBACK, 10);
       PRE (R_2007a) {
-        FIELD_TV (DIMPOST, 1);
-        FIELD_TV (DIMAPOST, 1);
+        FIELD_TH (DIMPOST, 1);
+        FIELD_TH (DIMAPOST, 1);
       }
     }
 
@@ -459,11 +471,11 @@
 
   IF_FREE_OR_VERSIONS (R_13b1, R_14)
     {
-      FIELD_TV (DIMPOST, 1);
-      FIELD_TV (DIMAPOST, 1);
-      FIELD_TV (DIMBLK_T, 1);
-      FIELD_TV (DIMBLK1_T, 1);
-      FIELD_TV (DIMBLK2_T, 1);
+      FIELD_TH (DIMPOST, 1);
+      FIELD_TH (DIMAPOST, 1);
+      FIELD_TH (DIMBLK_T, 1);
+      FIELD_TH (DIMBLK1_T, 1);
+      FIELD_TH (DIMBLK2_T, 1);
     }
 
   SINCE (R_2000b)
@@ -570,8 +582,8 @@
       FIELD_BS (TSTACKALIGN, 70);
       FIELD_BS (TSTACKSIZE, 70);
       PRE (R_2007a) {
-        FIELD_TV (HYPERLINKBASE, 1);
-        FIELD_TV (STYLESHEET, 1);
+        FIELD_TH (HYPERLINKBASE, 1);
+        FIELD_TH (STYLESHEET, 1);
       }
       FIELD_HANDLE (DICTIONARY_LAYOUT, 5, 0);
       FIELD_HANDLE (DICTIONARY_PLOTSETTINGS, 5, 0);
@@ -627,8 +639,8 @@
           FIELD_HANDLE (CPSNID, 5, 0);
         }
       PRE (R_2007a) {
-        FIELD_TV (FINGERPRINTGUID, 2);
-        FIELD_TV (VERSIONGUID, 2);
+        FIELD_TH (FINGERPRINTGUID, 2);
+        FIELD_TH (VERSIONGUID, 2);
       }
     }
 
@@ -645,7 +657,7 @@
       FIELD_RC (OBSLTYPE, 280);
       FIELD_RC (INTERSECTIONDISPLAY, 290);
       PRE (R_2007a) {
-        FIELD_TV (PROJECTNAME, 1);
+        FIELD_TH (PROJECTNAME, 1);
       }
     }
 
