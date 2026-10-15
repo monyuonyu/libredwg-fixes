@@ -372,22 +372,62 @@ encode_3dsolid (Bit_Chain *dat, Bit_Chain *hdl_dat, Dwg_Object *restrict obj,
           // from decode and indxf we already have all fields.
           // from other importers we have acis_data, but maybe not
           // encr_sat_data.
-          if (!FIELD_VALUE (block_size))
+          if (!FIELD_VALUE (block_size) && !FIELD_VALUE (acis_data))
             {
-              if (!FIELD_VALUE (acis_data))
+              VALUE_RL (0, 0);
+              return error;
+            }
+          /* As AutoCAD, in blocks of at most 4096 bytes. The DXF importer
+             and other importers give the whole SAT in one block, and a
+             block of MAX_SIZE_TF (64KB) or more was written without its
+             data (FIELD_TF): a large solid lost its ACIS data, and the
+             rest of the entity was garbage. */
+          if (FIELD_VALUE (acis_data))
+            {
+              int split = !FIELD_VALUE (block_size)
+                          || !FIELD_VALUE (encr_sat_data)
+                          || (!num_blocks && FIELD_VALUE (block_size[0]));
+              for (i = 0; !split && i < num_blocks
+                          && FIELD_VALUE (block_size[i]);
+                   i++)
+                if (FIELD_VALUE (block_size[i]) > 4096)
+                  split = 1;
+              if (split)
                 {
-                  VALUE_RL (0, 0);
-                  return error;
+                  const size_t total
+                      = strlen ((char *)FIELD_VALUE (acis_data));
+                  const BITCODE_BL n = (BITCODE_BL)((total + 4095) / 4096);
+                  if (FIELD_VALUE (encr_sat_data))
+                    {
+                      for (i = 0; i <= num_blocks; i++)
+                        free (FIELD_VALUE (encr_sat_data[i]));
+                      free (FIELD_VALUE (encr_sat_data));
+                    }
+                  free (FIELD_VALUE (block_size));
+                  FIELD_VALUE (block_size)
+                      = (BITCODE_BL *)calloc (n + 1, sizeof (BITCODE_BL));
+                  FIELD_VALUE (encr_sat_data)
+                      = (char **)calloc (n + 1, sizeof (char *));
+                  if (!FIELD_VALUE (block_size)
+                      || !FIELD_VALUE (encr_sat_data))
+                    {
+                      FIELD_VALUE (num_blocks) = 0;
+                      return DWG_ERR_OUTOFMEM;
+                    }
+                  for (i = 0; i < n; i++)
+                    {
+                      const size_t off = (size_t)i * 4096;
+                      FIELD_VALUE (block_size[i])
+                          = (BITCODE_BL)MIN (total - off, 4096);
+                      FIELD_VALUE (encr_sat_data[i]) = dwg_encrypt_SAT1 (
+                          FIELD_VALUE (block_size[i]),
+                          &FIELD_VALUE (acis_data)[off], &acis_data_idx);
+                    }
+                  num_blocks = FIELD_VALUE (num_blocks) = n;
+                  LOG_TRACE ("SAT of %" PRIuSIZE " in " FORMAT_BL
+                             " blocks\n",
+                             total, num_blocks);
                 }
-              // Later split into 4096 byte sized blocks
-              FIELD_VALUE (block_size)
-                  = (BITCODE_BL *)calloc (2, sizeof (BITCODE_BL));
-              FIELD_VALUE (block_size[0])
-                  = strlen ((char *)FIELD_VALUE (acis_data)) & 0xFFFFFFFF;
-              FIELD_VALUE (block_size[1]) = 0;
-              LOG_TRACE ("default block_size[0] = %d\n",
-                         (int)FIELD_VALUE (block_size[0]));
-              num_blocks = 1;
             }
           /* insecure. e.g. oss-fuzz issue 32165
              all inputs: dwg, injson and indxf have correct num_blocks values
