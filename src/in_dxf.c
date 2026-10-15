@@ -1430,6 +1430,8 @@ dxf_read_CMC (const Dwg_Data *restrict dwg, Bit_Chain *restrict dat,
   return error;
 }
 
+static void dxf_set_DWGCODEPAGE (Bit_Chain *dat, Dwg_Data *dwg);
+
 static int
 dxf_header_read (Bit_Chain *restrict dat, Dwg_Data *restrict dwg)
 {
@@ -1665,6 +1667,11 @@ dxf_header_read (Bit_Chain *restrict dat, Dwg_Data *restrict dwg)
                          pair->code);
               // TODO need to free old string values
               dwg_dynapi_header_set_value (dwg, &field[1], &pair->value, 1);
+              // dxf_read_pair converts the UTF-8 strings of a R2007+ DXF
+              // to the codepage for a target before R2007: also the next
+              // header strings, as $HYPERLINKBASE or $STYLESHEET.
+              if (strEQc (field, "$DWGCODEPAGE"))
+                dxf_set_DWGCODEPAGE (dat, dwg);
             }
           else
             {
